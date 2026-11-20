@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My profile - Morrow</title>
+  <link rel="stylesheet" href="../../static/css/auth.css" th:href="@{/css/auth.css}" />
+</head>
+<body>
+  <main class="card">
+    <div class="header">
+      <a href="/" class="logo">
+        <span class="logo-mark"></span>
+        <span>Morrow</span>
+      </a>
+      <a href="/" class="back-link">&larr; Back to homepage</a>
+    </div>
+
+    <h1 class="title title-tight">My profile</h1>
+    <p class="subtitle">View and update your personal account information.</p>
+
+    <div th:if="${successMessage}" th:text="${successMessage}" class="alert-success"></div>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert-banner"></div>
+
+    <form id="profileForm" th:action="@{/profile/update}" method="post" novalidate>
+      <div class="field">
+        <label class="label" for="email">Email</label>
+        <input class="input" type="email" id="email" name="email" th:value="${user?.email}" value="minh.nguyen@example.com" readonly />
+        <span class="hint-text">Email address cannot be changed</span>
+      </div>
+
+      <div class="field">
+        <label class="label" for="fullName">Full name</label>
+        <input class="input" type="text" id="fullName" name="fullName" th:value="${user?.fullName}" value="Nguyen Minh" required />
+        <span id="profileNameError" class="error-msg">Full name is required</span>
+      </div>
+
+      <div class="field">
+        <label class="label" for="phone">Phone number</label>
+        <input class="input" type="tel" id="phone" name="phone" th:value="${user?.phone}" value="+84 912 345 678" required />
+        <span id="profilePhoneError" class="error-msg">Please enter a valid Vietnamese phone number</span>
+      </div>
+
+      <button type="submit" class="btn-submit">Save changes</button>
+    </form>
+
+    <div class="switch-text">
+      <a href="../auth/login.html" th:href="@{/logout}" class="no-gap">Log out</a>
+    </div>
+
+    <footer class="footer">
+      <span>&copy; 2026 Morrow</span>
+      <nav class="footer-nav">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </nav>
+    </footer>
+  </main>
+
+  <script src="../../static/js/auth.js" th:src="@{/js/auth.js}"></script>
+</body>
+</html>
