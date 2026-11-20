@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết đơn thuê - MORROW</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+<div class="container">
+    <h2>Chi tiết đơn thuê <span th:text="'#' + ${booking.id}"></span></h2>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="card">
+        <p><strong>Trạng thái:</strong> <span th:text="${booking.status}"></span></p>
+        <p><strong>Chi nhánh nhận:</strong> <span th:text="${booking.pickupBranch.name}"></span></p>
+        <p><strong>Chi nhánh trả:</strong> <span th:text="${booking.returnBranch.name}"></span></p>
+        <p><strong>Ngày nhận xe:</strong> <span th:text="${#temporals.format(booking.pickupDate, 'dd/MM/yyyy HH:mm')}"></span></p>
+        <p><strong>Ngày trả xe:</strong> <span th:text="${#temporals.format(booking.returnDate, 'dd/MM/yyyy HH:mm')}"></span></p>
+        <p><strong>Phương thức thanh toán:</strong> <span th:text="${booking.paymentMethod}"></span></p>
+        <p><strong>Tổng tiền thuê:</strong> <span th:text="${#numbers.formatDecimal(booking.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span></p>
+        <p><strong>Tiền cọc (30%):</strong> <span th:text="${#numbers.formatDecimal(booking.depositAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span></p>
+    </div>
+
+    <h3>Danh sách xe trong đơn</h3>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Mã xe</th>
+            <th>Tên xe</th>
+            <th>Đơn giá/ngày</th>
+            <th>Số ngày</th>
+            <th>Thành tiền</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${booking.details}">
+            <td th:text="${d.vehicle.vehicleCode}"></td>
+            <td th:text="${d.vehicle.name}"></td>
+            <td th:text="${#numbers.formatDecimal(d.dailyPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+            <td th:text="${d.days}"></td>
+            <td th:text="${#numbers.formatDecimal(d.subtotal, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="actions">
+        <a th:href="@{/bookings}" class="btn">← Quay lại danh sách</a>
+        <form th:if="${booking.status.name() == 'PENDING' || booking.status.name() == 'CONFIRMED'}"
+              th:action="@{/bookings/{id}/cancel(id=${booking.id})}" method="post" style="display:inline;"
+              onsubmit="return confirm('Xác nhận hủy đơn thuê này?');">
+            <input type="text" name="reason" placeholder="Lý do hủy (tùy chọn)">
+            <button type="submit" class="btn btn-danger">Hủy đơn thuê</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
