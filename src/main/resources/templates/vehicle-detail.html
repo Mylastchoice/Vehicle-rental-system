@@ -1,0 +1,4 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><title>Chi tiết xe</title></head><body>
+<h1 th:text="${vehicle.name}"></h1><p>Mã xe: <span th:text="${vehicle.vehicleCode}"></span></p>
+<p>Loại xe: <span th:text="${vehicle.vehicleType}"></span></p><p>Giá/ngày: <span th:text="${vehicle.pricePerDay}"></span></p>
+<p>Lượt xem: <span th:text="${vehicle.viewCount}"></span></p><a href="/vehicles">Quay lại</a></body></html>

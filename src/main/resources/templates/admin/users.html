@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Quản lý người dùng</title></head>
+<body>
+<h1>Quản lý người dùng</h1>
+<p th:if="${success}" th:text="${success}" style="color:green"></p>
+<p th:if="${error}" th:text="${error}" style="color:red"></p>
+<a href="/admin/users/new">Thêm người dùng</a>
+<table border="1">
+<tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Email</th><th>Trạng thái</th><th>Thao tác</th></tr>
+<tr th:each="u : ${users}">
+<td th:text="${u.username}"></td><td th:text="${u.fullName}"></td>
+<td th:text="${u.email}"></td><td th:text="${u.locked ? 'Đã khóa' : 'Hoạt động'}"></td>
+<td>
+<a th:href="@{/admin/users/{id}/edit(id=${u.id})}">Sửa</a>
+<form th:if="${!u.locked}" th:action="@{/admin/users/{id}/lock(id=${u.id})}" method="post" style="display:inline"><button>Khóa</button></form>
+<form th:if="${u.locked}" th:action="@{/admin/users/{id}/unlock(id=${u.id})}" method="post" style="display:inline"><button>Mở khóa</button></form>
+</td></tr></table>
+</body></html>

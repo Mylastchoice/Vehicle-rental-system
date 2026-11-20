@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Thông tin xe</title></head>
+<body>
+<h1>Thông tin xe</h1>
+<p th:if="${error}" th:text="${error}" style="color:red"></p>
+<form th:object="${vehicle}" th:action="${vehicle.id == null} ? @{/admin/vehicles} : @{/admin/vehicles/{id}(id=${vehicle.id})}" method="post">
+<label>Mã xe</label><input th:field="*{vehicleCode}" required maxlength="30"><br>
+<label>Tên xe</label><input th:field="*{name}" required maxlength="120"><br>
+<label>Loại xe</label><input th:field="*{vehicleType}" required maxlength="60"><br>
+<label>Giá thuê/ngày</label><input type="number" step="0.01" min="0" th:field="*{pricePerDay}" required><br>
+<label>URL ảnh</label><input th:field="*{imageUrl}" maxlength="500"><br>
+<label>Danh mục</label>
+<select name="categoryId">
+<option value="">Chưa chọn</option>
+<option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}" th:selected="${vehicle.category != null && vehicle.category.id == c.id}"></option>
+</select><br>
+<button type="submit">Lưu</button>
+</form>
+<a href="/admin/vehicles">Quay lại</a>
+</body></html>

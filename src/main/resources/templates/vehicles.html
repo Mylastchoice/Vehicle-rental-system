@@ -1,0 +1,11 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><title>Danh sách xe</title></head><body>
+<h1>Danh sách xe</h1>
+<form action="/vehicles/search" method="get"><input name="keyword" placeholder="Nhập tên hoặc mã xe"><button>Tìm kiếm</button></form>
+<form action="/vehicles" method="get"><select name="categoryId"><option value="">Tất cả danh mục</option><option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option></select>
+<select name="sort"><option value="newest">Mới nhất</option><option value="price">Giá thấp đến cao</option></select><button>Lọc</button></form>
+<ul><li th:each="v : ${vehicles.content}"><a th:href="@{/vehicles/{id}(id=${v.id})}" th:text="${v.name}"></a> -
+<span th:text="${v.pricePerDay}"></span> / ngày</li></ul>
+<p>Trang <span th:text="${vehicles.number + 1}"></span> / <span th:text="${vehicles.totalPages}"></span></p>
+<a th:if="${vehicles.hasPrevious()}" th:href="@{/vehicles(page=${vehicles.number-1},categoryId=${categoryId},sort=${sort})}">Trước</a>
+<a th:if="${vehicles.hasNext()}" th:href="@{/vehicles(page=${vehicles.number+1},categoryId=${categoryId},sort=${sort})}">Sau</a>
+<a href="/admin/vehicles">Quản trị</a></body></html>

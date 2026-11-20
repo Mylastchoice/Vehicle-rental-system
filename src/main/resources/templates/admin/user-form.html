@@ -1,0 +1,6 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><title>Thông tin người dùng</title></head><body>
+<h1>Thông tin người dùng</h1><form th:object="${user}" th:action="${user.id == null} ? @{/admin/users} : @{/admin/users/{id}(id=${user.id})}" method="post">
+<label>Tên đăng nhập</label><input th:field="*{username}" required><br><label>Họ tên</label><input th:field="*{fullName}" required><br>
+<label>Email</label><input type="email" th:field="*{email}" required><br>
+<div th:if="${user.id == null}"><label>Mật khẩu</label><input type="password" name="password" required></div>
+<button>Lưu</button></form><a href="/admin/users">Quay lại</a></body></html>
