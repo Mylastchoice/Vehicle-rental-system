@@ -110,13 +110,13 @@ public class AuthService {
 
         User user = userRepository.findByEmail(mail).orElse(null);
         if (user == null) {
-            return null;
+            return null; //nếu email không tồn tại thì trả về null
         }
 
-        String token = UUID.randomUUID().toString();
-        resetTokenEmail.put(token, mail);
+        String token = UUID.randomUUID().toString();//một mã ngẫu nhiên duy nhất
+        resetTokenEmail.put(token, mail);//lưu cặp token->mail vào rstokenemail
         resetTokenExpiry.put(token, LocalDateTime.now().plusMinutes(30));
-        return token;
+        return token; //lưu hạn sử dụng datatime.now...30 vào rstokenexpiry
     }
 
     public boolean isValidResetToken(String token) {
@@ -126,17 +126,17 @@ public class AuthService {
         LocalDateTime expiry = resetTokenExpiry.get(token);
         if (expiry == null) {
             return false;
-        }
-        if (LocalDateTime.now().isAfter(expiry)) {
-            resetTokenEmail.remove(token);
+        }//kiểm tra token có rỗng ko và có tồn tại trong rstokenexpiry không nếu ko thì trả về flase
+        if (LocalDateTime.now().isAfter(expiry)) {//nếu đã qua 30 phút thì xóa luôn token khỏi 2 map
+            resetTokenEmail.remove(token);//và trả về flase còn hạn thì trả vè true
             resetTokenExpiry.remove(token);
             return false;
         }
-        return true;
+        return true;//so sánh giờ hiện tại và giờ hết hạn 
     }
 
     public void resetPassword(String token, String newPassword, String confirmPassword) {
-        if (!isValidResetToken(token)) {
+        if (!isValidResetToken(token)) {//
             throw new IllegalArgumentException("Reset link is invalid or expired.");
         }
         if (newPassword == null || !newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
