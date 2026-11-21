@@ -21,7 +21,3 @@ application-secret.properties
 # OS files
 .DS_Store
 Thumbs.db
-
-# Local secrets / IDE
-.env
-*.log
