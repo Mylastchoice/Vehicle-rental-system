@@ -1,14 +1,14 @@
 package com.group01.entity;
 
+import com.group01.enums.UserRole;
+import com.group01.enums.UserStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.group01.enums.UserRole;
-import com.group01.enums.UserStatus;
 
 /** Customer account (role MEMBER) or, if role = ADMIN, an administrator who is stored in the users table. */
 @Entity
-@Table(name = "users")
+@Table(name = "users", schema = "public")
 public class User {
 
     @Id
@@ -19,10 +19,10 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
     @Column(name = "date_of_birth")
@@ -31,7 +31,7 @@ public class User {
     @Column(name = "gender", length = 20)
     private String gender;
 
-    @Column(name = "address")
+    @Column(name = "address", columnDefinition = "text")
     private String address;
 
     @Column(name = "phone", nullable = false, length = 20)
@@ -51,6 +51,23 @@ public class User {
 
     public User() {
         // required by JPA
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.role == null) {
+            this.role = UserRole.MEMBER;
+        }
+        if (this.status == null) {
+            this.status = UserStatus.ACTIVE;
+        }
+    }
+
+    public Long getId() {
+        return userId;
     }
 
     public Long getUserId() {
@@ -133,12 +150,24 @@ public class User {
         this.role = role;
     }
 
+    public void setRole(String role) {
+        if (role != null && !role.isBlank()) {
+            this.role = UserRole.valueOf(role.trim().toUpperCase());
+        }
+    }
+
     public UserStatus getStatus() {
         return status;
     }
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public void setStatus(String status) {
+        if (status != null && !status.isBlank()) {
+            this.status = UserStatus.valueOf(status.trim().toUpperCase());
+        }
     }
 
     public LocalDateTime getCreatedAt() {
@@ -148,12 +177,4 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-    @PrePersist
-    void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
-
 }
