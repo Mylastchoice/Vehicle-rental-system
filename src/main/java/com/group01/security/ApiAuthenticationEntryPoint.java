@@ -26,7 +26,6 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
                          AuthenticationException authException) throws IOException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("WWW-Authenticate", "Basic realm=\"Morrow Vehicle Rental\"");
         objectMapper.writeValue(response.getOutputStream(), ApiError.of(HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(), "Authentication is required or the credentials are wrong",
                 request.getRequestURI()));

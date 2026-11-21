@@ -92,7 +92,7 @@ public class AuthService {
             throw new IllegalArgumentException("Incorrect email or password. " + remaining + " attempt(s) left.");
         }
 
-        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+        if (user.getStatus() == null || !"ACTIVE".equalsIgnoreCase(user.getStatus().name())) {
             throw new IllegalStateException("Your account is inactive.");
         }
 
@@ -110,13 +110,13 @@ public class AuthService {
 
         User user = userRepository.findByEmail(mail).orElse(null);
         if (user == null) {
-            return null; //nếu email không tồn tại thì trả về null
+            return null;
         }
 
-        String token = UUID.randomUUID().toString();//một mã ngẫu nhiên duy nhất
-        resetTokenEmail.put(token, mail);//lưu cặp token->mail vào rstokenemail
+        String token = UUID.randomUUID().toString();
+        resetTokenEmail.put(token, mail);
         resetTokenExpiry.put(token, LocalDateTime.now().plusMinutes(30));
-        return token; //lưu hạn sử dụng datatime.now...30 vào rstokenexpiry
+        return token;
     }
 
     public boolean isValidResetToken(String token) {
@@ -126,17 +126,17 @@ public class AuthService {
         LocalDateTime expiry = resetTokenExpiry.get(token);
         if (expiry == null) {
             return false;
-        }//kiểm tra token có rỗng ko và có tồn tại trong rstokenexpiry không nếu ko thì trả về flase
-        if (LocalDateTime.now().isAfter(expiry)) {//nếu đã qua 30 phút thì xóa luôn token khỏi 2 map
-            resetTokenEmail.remove(token);//và trả về flase còn hạn thì trả vè true
+        }
+        if (LocalDateTime.now().isAfter(expiry)) {
+            resetTokenEmail.remove(token);
             resetTokenExpiry.remove(token);
             return false;
         }
-        return true;//so sánh giờ hiện tại và giờ hết hạn 
+        return true;
     }
 
     public void resetPassword(String token, String newPassword, String confirmPassword) {
-        if (!isValidResetToken(token)) {//
+        if (!isValidResetToken(token)) {
             throw new IllegalArgumentException("Reset link is invalid or expired.");
         }
         if (newPassword == null || newPassword.length() < 6) {

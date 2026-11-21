@@ -1,6 +1,7 @@
 package com.group01.controller;
 
 import com.group01.entity.User;
+import com.group01.security.DatabaseUserDetailsService;
 import com.group01.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -8,6 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,31 +26,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-// Controller điều hướng các luồng xác thực: đăng ký, đăng nhập, đăng xuất, quên/đặt lại mật khẩu
 @Controller
 public class AuthController {
 
     private final AuthService authService;
 
-    // Tiêm JavaMailSender (required = false giúp ứng dụng và test vẫn chạy được khi chưa điền cấu hình SMTP)
+    @Autowired(required = false)
+    private DatabaseUserDetailsService userDetailsService;
+
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
-    // Lấy thông tin SMTP từ biến môi trường (mặc định rỗng để không lộ mật khẩu trên Git)
     @Value("${spring.mail.username:}")
     private String fromEmail;
 
     @Value("${spring.mail.password:}")
     private String mailPassword;
 
-    // Lưu danh sách thời điểm gửi request theo IP để giới hạn tần suất (tối đa 5 lần / 10 phút)
     private final Map<String, List<Long>> requestLogs = new HashMap<>();
 
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
-    // Kiểm tra Rate Limiting theo IP: chặn nếu vượt quá 5 yêu cầu trong 10 phút
     private boolean isSpamRequest(String ip) {
         long now = System.currentTimeMillis();
         long tenMinutes = 10 * 60 * 1000L;
@@ -67,7 +71,6 @@ public class AuthController {
         return false;
     }
 
-    // Tạo phép cộng ngẫu nhiên làm CAPTCHA và lưu đáp án vào HttpSession phía server
     private void taoCaptcha(HttpSession session) {
         Random rd = new Random();
         int a = rd.nextInt(9) + 1;
@@ -76,7 +79,6 @@ public class AuthController {
         session.setAttribute("captchaCauHoi", a + " + " + b + " = ?");
     }
 
-    // Lấy URL gốc động theo request (hỗ trợ cả tunnel qua X-Forwarded-*) để không gắn cứng localhost:8080
     private String getBaseUrl(HttpServletRequest request) {
         String forwardedProto = request.getHeader("X-Forwarded-Proto");
         String forwardedHost = request.getHeader("X-Forwarded-Host");
@@ -96,7 +98,6 @@ public class AuthController {
         return scheme + "://" + serverName + ":" + serverPort;
     }
 
-    // Gửi email chứa link đặt lại mật khẩu; nếu chưa cấu hình SMTP thì in link ra console để test local
     private void sendResetPasswordEmail(String toEmail, String resetUrl) {
         if (mailSender == null || fromEmail == null || fromEmail.isBlank()
                 || mailPassword == null || mailPassword.isBlank()) {
@@ -117,7 +118,6 @@ public class AuthController {
 
     // ==================== 1. ĐĂNG KÝ TÀI KHOẢN (UC03) ====================
 
-    // Mở trang đăng ký và sinh câu hỏi CAPTCHA mới
     @GetMapping("/register")
     public String showRegisterPage(HttpSession session, Model model) {
         taoCaptcha(session);
@@ -125,7 +125,6 @@ public class AuthController {
         return "auth/register";
     }
 
-    // Xử lý submit form đăng ký: kiểm tra IP, CAPTCHA, sau đó gọi AuthService
     @PostMapping("/register")
     public String handleRegister(@RequestParam(defaultValue = "") String fullName,
                                  @RequestParam(defaultValue = "") String phone,
@@ -157,7 +156,6 @@ public class AuthController {
             return "auth/register";
         }
 
-        // Xóa CAPTCHA cũ sau khi kiểm tra để tránh dùng lại
         session.removeAttribute("captchaDapAn");
         session.removeAttribute("captchaCauHoi");
 
@@ -177,7 +175,6 @@ public class AuthController {
 
     // ==================== 2. ĐĂNG NHẬP & ĐĂNG XUẤT (UC04) ====================
 
-    // Mở trang đăng nhập và hiển thị thông báo tương ứng sau đăng ký hoặc đặt lại mật khẩu
     @GetMapping("/login")
     public String showLoginPage(@RequestParam(required = false) String registered,
                                 @RequestParam(required = false) String resetSuccess,
@@ -191,7 +188,6 @@ public class AuthController {
         return "auth/login";
     }
 
-    // Xác thực thông tin đăng nhập và lưu thông tin người dùng vào HttpSession
     @PostMapping("/login")
     public String handleLogin(@RequestParam(defaultValue = "") String email,
                               @RequestParam(defaultValue = "") String password,
@@ -202,7 +198,18 @@ public class AuthController {
             User user = authService.login(email, password);
             session.setAttribute("loggedInUser", user);
             session.setAttribute("userId", user.getUserId());
-            return "redirect:" + getBaseUrl(request) + "/profile";
+
+            if (userDetailsService != null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                context.setAuthentication(authToken);
+                SecurityContextHolder.setContext(context);
+                session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+            }
+
+            return "redirect:" + getBaseUrl(request) + "/";
         } catch (IllegalArgumentException | IllegalStateException e) {
             model.addAttribute("serverError", e.getMessage());
             model.addAttribute("email", email);
@@ -210,22 +217,20 @@ public class AuthController {
         }
     }
 
-    // Hủy phiên đăng nhập hiện tại và chuyển hướng về trang đăng nhập
     @GetMapping("/logout")
     public String logout(HttpSession session, HttpServletRequest request) {
+        SecurityContextHolder.clearContext();
         session.invalidate();
         return "redirect:" + getBaseUrl(request) + "/login";
     }
 
     // ==================== 3. QUÊN MẬT KHẨU & ĐẶT LẠI MẬT KHẨU (UC05) ====================
 
-    // Mở trang quên mật khẩu
     @GetMapping("/forgot-password")
     public String showForgotPasswordPage() {
         return "auth/forgot-password";
     }
 
-    // Tạo token đặt lại mật khẩu và gửi link qua email (thông báo giống hệt nhau dù email có tồn tại hay không)
     @PostMapping("/forgot-password")
     public String handleForgotPassword(@RequestParam(defaultValue = "") String email,
                                        HttpServletRequest request,
@@ -253,7 +258,6 @@ public class AuthController {
             model.addAttribute("successMessage", genericSuccess);
             return "auth/forgot-password";
         } catch (IllegalArgumentException e) {
-            // Email chưa tồn tại trong DB vẫn trả về thông báo giống hệt để tránh dò tài khoản
             model.addAttribute("successMessage", genericSuccess);
             return "auth/forgot-password";
         } catch (Exception e) {
@@ -263,7 +267,6 @@ public class AuthController {
         }
     }
 
-    // Mở trang đặt lại mật khẩu mới và kiểm tra tính hợp lệ của token
     @GetMapping("/reset-password")
     public String showResetPasswordPage(@RequestParam(defaultValue = "") String token, Model model) {
         model.addAttribute("token", token);
@@ -273,7 +276,6 @@ public class AuthController {
         return "auth/reset-password";
     }
 
-    // Cập nhật mật khẩu mới và đánh dấu token đã sử dụng
     @PostMapping("/reset-password")
     public String handleResetPassword(@RequestParam(defaultValue = "") String token,
                                       @RequestParam(defaultValue = "") String newPassword,
