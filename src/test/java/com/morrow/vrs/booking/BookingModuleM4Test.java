@@ -88,4 +88,4 @@ class BookingModuleM4Test {
                 () -> adminBookingService.updateBookingStatus(20L, BookingStatus.COMPLETED, 5L, "Nhảy cóc"));
         verify(bookingRepository, never()).save(any());
     }
-}
+} 

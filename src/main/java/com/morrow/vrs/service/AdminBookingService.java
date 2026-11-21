@@ -5,6 +5,7 @@ import com.morrow.vrs.domain.BookingDetail;
 import com.morrow.vrs.domain.BookingStatusHistory;
 import com.morrow.vrs.domain.enums.BookingStatus;
 import com.morrow.vrs.integration.EmailNotificationAdapter;
+import com.morrow.vrs.integration.PaymentGateway;
 import com.morrow.vrs.repository.BookingRepository;
 import com.morrow.vrs.repository.BookingStatusHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -22,6 +24,7 @@ public class AdminBookingService {
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository historyRepository;
     private final AvailabilityService availabilityService;
+    private final PaymentGateway paymentGateway;
     private final EmailNotificationAdapter emailAdapter;
 
     @Transactional(readOnly = true)
@@ -57,6 +60,19 @@ public class AdminBookingService {
             }
         }
 
+        String finalNote = adminNote != null ? adminNote : "";
+
+        // Chính sách hoàn cọc: Khi Admin hủy đơn (CANCELLED) -> hoàn 100% tiền cọc bất kể thời điểm hủy
+        if (targetStatus == BookingStatus.CANCELLED) {
+            BigDecimal deposit = booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO;
+            if (deposit.compareTo(BigDecimal.ZERO) > 0) {
+                paymentGateway.refundDeposit(booking.getId(), deposit);
+            }
+            String refundNote = "Admin hủy đơn: Hoàn 100% tiền cọc (" + deposit + ").";
+            finalNote = finalNote.isBlank() ? refundNote : finalNote + " | " + refundNote;
+            emailAdapter.sendBookingCancelledEmail(booking, deposit, refundNote);
+        }
+
         booking.setStatus(targetStatus);
         Booking saved = bookingRepository.save(booking);
 
@@ -66,11 +82,13 @@ public class AdminBookingService {
                 .oldStatus(currentStatus)
                 .newStatus(targetStatus)
                 .changedByUserId(adminUserId)
-                .note(adminNote)
+                .note(finalNote)
                 .changedAt(LocalDateTime.now())
                 .build());
 
-        emailAdapter.sendBookingStatusChangedEmail(saved, currentStatus, targetStatus);
+        if (targetStatus != BookingStatus.CANCELLED) {
+            emailAdapter.sendBookingStatusChangedEmail(saved, currentStatus, targetStatus);
+        }
 
         return saved;
     }
