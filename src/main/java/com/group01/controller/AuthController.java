@@ -81,8 +81,11 @@ public class AuthController {
         String forwardedProto = request.getHeader("X-Forwarded-Proto");
         String forwardedHost = request.getHeader("X-Forwarded-Host");
         if (forwardedHost != null && !forwardedHost.isEmpty()) {
-            String scheme = (forwardedProto != null && !forwardedProto.isEmpty()) ? forwardedProto : request.getScheme();
-            return scheme + "://" + forwardedHost;
+            String host = forwardedHost.split(",")[0].trim();
+            String scheme = (forwardedProto != null && !forwardedProto.isEmpty())
+                    ? forwardedProto.split(",")[0].trim()
+                    : request.getScheme();
+            return scheme + "://" + host;
         }
         String scheme = request.getScheme();
         String serverName = request.getServerName();
@@ -160,7 +163,7 @@ public class AuthController {
 
         try {
             authService.register(fullName, phone, email, password, confirmPassword);
-            return "redirect:/login?registered=true";
+            return "redirect:" + getBaseUrl(request) + "/login?registered=true";
         } catch (IllegalArgumentException e) {
             taoCaptcha(session);
             model.addAttribute("captchaCauHoi", session.getAttribute("captchaCauHoi"));
@@ -193,12 +196,13 @@ public class AuthController {
     public String handleLogin(@RequestParam(defaultValue = "") String email,
                               @RequestParam(defaultValue = "") String password,
                               HttpSession session,
+                              HttpServletRequest request,
                               Model model) {
         try {
             User user = authService.login(email, password);
             session.setAttribute("loggedInUser", user);
             session.setAttribute("userId", user.getUserId());
-            return "redirect:/profile";
+            return "redirect:" + getBaseUrl(request) + "/profile";
         } catch (IllegalArgumentException | IllegalStateException e) {
             model.addAttribute("serverError", e.getMessage());
             model.addAttribute("email", email);
@@ -208,9 +212,9 @@ public class AuthController {
 
     // Hủy phiên đăng nhập hiện tại và chuyển hướng về trang đăng nhập
     @GetMapping("/logout")
-    public String logout(HttpSession session) {
+    public String logout(HttpSession session, HttpServletRequest request) {
         session.invalidate();
-        return "redirect:/login";
+        return "redirect:" + getBaseUrl(request) + "/login";
     }
 
     // ==================== 3. QUÊN MẬT KHẨU & ĐẶT LẠI MẬT KHẨU (UC05) ====================
@@ -274,10 +278,11 @@ public class AuthController {
     public String handleResetPassword(@RequestParam(defaultValue = "") String token,
                                       @RequestParam(defaultValue = "") String newPassword,
                                       @RequestParam(defaultValue = "") String confirmPassword,
+                                      HttpServletRequest request,
                                       Model model) {
         try {
             authService.resetPassword(token, newPassword, confirmPassword);
-            return "redirect:/login?resetSuccess=true";
+            return "redirect:" + getBaseUrl(request) + "/login?resetSuccess=true";
         } catch (IllegalArgumentException e) {
             model.addAttribute("token", token);
             model.addAttribute("serverError", e.getMessage());

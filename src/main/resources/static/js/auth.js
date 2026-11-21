@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
       setFieldError('email', 'emailError', !emailRegex.test(email));
       if (!emailRegex.test(email)) valid = false;
 
-      setFieldError('password', 'passwordError', password.length < 8);
-      if (password.length < 8) valid = false;
+      setFieldError('password', 'passwordError', password.length < 6);
+      if (password.length < 6) valid = false;
 
       const mismatch = password !== confirmPassword || confirmPassword === '';
       setFieldError('confirmPassword', 'confirmError', mismatch);
@@ -90,8 +90,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const confirmPwd = confirmInput ? confirmInput.value : '';
       const confirmInputId = confirmInput ? confirmInput.id : 'confirmPassword';
 
-      setFieldError('newPassword', 'newPwdError', newPwd.length < 8);
-      if (newPwd.length < 8) valid = false;
+      setFieldError('newPassword', 'newPwdError', newPwd.length < 6);
+      if (newPwd.length < 6) valid = false;
 
       const mismatch = newPwd !== confirmPwd || confirmPwd === '';
       setFieldError(confirmInputId, 'confirmNewPwdError', mismatch);

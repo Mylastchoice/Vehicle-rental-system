@@ -43,8 +43,8 @@ public class AuthService {
         if (!mail.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
             throw new IllegalArgumentException("Invalid email address.");
         }
-        if (password == null || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
-            throw new IllegalArgumentException("Password must be at least 8 characters and include letters and numbers.");
+        if (password == null || password.length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters.");
         }
         if (!password.equals(confirmPassword)) {
             throw new IllegalArgumentException("Confirm password does not match.");
@@ -139,8 +139,8 @@ public class AuthService {
         if (!isValidResetToken(token)) {//
             throw new IllegalArgumentException("Reset link is invalid or expired.");
         }
-        if (newPassword == null || !newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
-            throw new IllegalArgumentException("New password must be at least 8 characters with letters and numbers.");
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new IllegalArgumentException("New password must be at least 6 characters.");
         }
         if (!newPassword.equals(confirmPassword)) {
             throw new IllegalArgumentException("Confirm password does not match.");
@@ -192,8 +192,8 @@ public class AuthService {
         if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new IllegalArgumentException("Current password is incorrect.");
         }
-        if (newPassword == null || !newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
-            throw new IllegalArgumentException("New password must be at least 8 characters with letters and numbers.");
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new IllegalArgumentException("New password must be at least 6 characters.");
         }
         if (!newPassword.equals(confirmPassword)) {
             throw new IllegalArgumentException("Confirm password does not match.");
