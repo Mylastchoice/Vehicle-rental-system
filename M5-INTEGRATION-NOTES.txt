@@ -1,0 +1,26 @@
+M5 integration notes
+====================
+
+This archive is based on the supplied Vehicle-rental-system-develop project.
+M5 was integrated into the existing com.group01 Spring Boot/PostgreSQL structure;
+the standalone com.morrow.vehiclerental project was not copied in.
+
+Changed/added:
+- Added service/AdminService.java and controller/AdminController.java for admin
+  user, vehicle, and category management.
+- Catalog search now accepts pickupDate and returnDate and excludes vehicles
+  with overlapping PENDING, CONFIRMED, or PICKED_UP bookings.
+- Search retains the existing LIKE escaping for '%' and '_'.
+- Vehicle detail GET increments viewCount.
+- Vehicle updates retain the current category/branch when their IDs are omitted.
+- New member accounts validate email and password length and store BCrypt hashes.
+- Existing DatabaseUserDetailsService and SecurityConfig remain the authentication
+  and authorization source; admin endpoints stay under /api/admin/**.
+
+Important:
+- The README documents the new endpoints and example request.
+- This environment did not have Maven installed, so mvn test / package could not
+  be executed here. Please run the project's CI or `mvn test` in the team's
+  development environment before merging.
+- The administration work here exposes backend REST APIs. It does not create a
+  web administration frontend.
