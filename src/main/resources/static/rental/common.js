@@ -1,9 +1,7 @@
-/* MORROW M3 UI helpers - browser integration preview, NOT authentication. */
+/* MORROW rental UI helpers - browser integration preview, NOT authentication. */
 (function () {
   'use strict';
-  const root = '/m3/';
-  const storageKey = 'morrow-m3-test-user';
-  const userInput = document.getElementById('test-user');
+  const root = '/rental/';
   let flashTimeout;
   const date = (d) => [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
   const advance = (days) => { const d = new Date(); d.setDate(d.getDate() + days); return date(d); };
@@ -17,12 +15,14 @@
   async function api(path, options = {}) {
     let response;
     try {
-      response = await fetch(path, { ...options, headers: { 'Accept': 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
+      response = await fetch(path, { ...options, credentials: 'same-origin', headers: { 'Accept': 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
     } catch (_) {
       throw new Error('Cannot connect to Spring Boot. Start the Java application and check PostgreSQL.');
     }
     let data;
     try { data = await response.json(); } catch (_) { data = {}; }
+    if (response.status === 401) throw new Error('Please sign in with your member account before using the rental cart.');
+    if (response.status === 403) throw new Error('Your account is not authorized to use the rental cart.');
     if (!response.ok) throw new Error(data.message || data.detail || `Server rejected request (HTTP ${response.status}).`);
     return data;
   }
@@ -35,11 +35,6 @@
     flashTimeout = setTimeout(() => { toast.hidden = true; }, 6000);
   }
   const isDateRange = (from, to) => from && to && from >= date(new Date()) && to > from;
-  function getUserId() {
-    const n = Number(userInput?.value);
-    if (!Number.isSafeInteger(n) || n < 1) throw new Error('Enter an existing positive test user ID at the top of the page.');
-    return n;
-  }
   function setupDates(start, end) {
     if (!start || !end) return;
     const min = date(new Date());
@@ -65,18 +60,9 @@
   async function refreshCount() {
     const count = document.getElementById('cart-count');
     if (!count) return;
-    try { count.textContent = (await api(`/api/carts/${getUserId()}`)).items.length; }
+    try { count.textContent = (await api('/api/carts/me')).items.length; }
     catch (_) { count.textContent = '0'; }
   }
-  if (userInput) {
-    let saved = null;
-    try { saved = localStorage.getItem(storageKey); } catch (_) { /* storage disabled */ }
-    userInput.value = saved || '1';
-    userInput.addEventListener('change', () => {
-      try { localStorage.setItem(storageKey, userInput.value); } catch (_) { /* storage disabled */ }
-      window.location.reload();
-    });
-  }
   document.addEventListener('DOMContentLoaded', refreshCount);
-  window.M3 = { api, el, money, notify, getUserId, isDateRange, setupDates, imageFor, advance, refreshCount };
+  window.RentalUI = { api, el, money, notify, isDateRange, setupDates, imageFor, advance, refreshCount };
 }());

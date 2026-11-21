@@ -35,6 +35,15 @@ public class CheckoutService {
         }
     }
 
+    /** VN mobile number: 0[35789]xxxxxxxx or +84[35789]xxxxxxxx. */
+    static String validVietnamesePhone(String value) {
+        if (value == null || !value.trim().matches("(?:0|\\+84)[35789]\\d{8}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid Vietnamese mobile phone number");
+        }
+        return value.trim();
+    }
+
     private BigDecimal subtotal(CartLine line) {
         int days = Math.toIntExact(ChronoUnit.DAYS.between(
                 line.pickupDate(), line.returnDate()));
@@ -54,7 +63,7 @@ public class CheckoutService {
                     "Invalid user ID");
         }
         requireText(renterName, "Renter name");
-        requireText(renterPhone, "Renter phone");
+        String normalizedPhone = validVietnamesePhone(renterPhone);
         requireText(licenseNumber, "Driving license/ID number");
         requireText(pickupLocation, "Pickup location");
         requireText(paymentMethod, "Payment method");
@@ -124,7 +133,7 @@ public class CheckoutService {
 
         Long bookingId = repository.createBooking(userId, branchId,
                 pickupLocation.trim(), pickup, returned,
-                renterName.trim(), renterPhone.trim(),
+                renterName.trim(), normalizedPhone,
                 licenseNumber.trim(), total, deposit);
 
         for (int i = 0; i < items.size(); i++) {

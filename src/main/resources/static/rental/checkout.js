@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { api, el, money, notify, getUserId, isDateRange, imageFor } = window.M3;
+  const { api, el, money, notify, isDateRange, imageFor } = window.RentalUI;
   const form = document.getElementById('checkout-form');
   const submit = document.getElementById('place-order');
   const errorBox = document.getElementById('checkout-error');
@@ -9,7 +9,7 @@
   let sending = false;
   async function initialize() {
     try {
-      const data = await api(`/api/carts/${getUserId()}`);
+      const data = await api('/api/carts/me');
       items = data.items || [];
       host.replaceChildren();
       if (!items.length) { host.append(el('div', 'notice warning', 'Your cart is empty. Choose a vehicle first.')); return; }
@@ -36,6 +36,12 @@
     event.preventDefault();
     if (sending || submit.disabled) return;
     if (!form.reportValidity()) return;
+    const phone = document.getElementById('renter-phone').value.trim();
+    if (!/^(?:0|\+84)[35789]\d{8}$/.test(phone)) {
+      errorBox.textContent = 'Enter a valid Vietnamese mobile number (e.g. 0901234567).';
+      errorBox.hidden = false;
+      return;
+    }
     errorBox.hidden = true;
     sending = true; submit.disabled = true; submit.textContent = 'Submitting…';
     const body = {
@@ -46,11 +52,11 @@
       paymentMethod: 'AT_PICKUP'
     };
     try {
-      const result = await api(`/api/checkout/${getUserId()}`, { method: 'POST', body: JSON.stringify(body) });
+      const result = await api('/api/checkout', { method: 'POST', body: JSON.stringify(body) });
       if (!result.bookingId || result.bookingStatus !== 'Pending') throw new Error('Unexpected booking response from backend. Check the server before retrying.');
       // Save only a display snapshot. Real data remains in PostgreSQL; session storage is NOT proof of payment.
-      sessionStorage.setItem('morrow-m3-confirmation', JSON.stringify(result));
-      window.location.href = `/m3/confirmation.html?bookingId=${encodeURIComponent(result.bookingId)}`;
+      sessionStorage.setItem('morrow-booking-confirmation', JSON.stringify(result));
+      window.location.href = `/rental/confirmation.html?bookingId=${encodeURIComponent(result.bookingId)}`;
     } catch (error) { errorBox.textContent = error.message; errorBox.hidden = false; notify('Booking request was not completed.', true); }
     finally { sending = false; submit.disabled = false; submit.textContent = 'Submit booking request ↗'; }
   });

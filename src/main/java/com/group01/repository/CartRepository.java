@@ -90,6 +90,8 @@ public class CartRepository {
                 ci.cart_item_id AS "cartItemId",
                 ci.vehicle_code AS "vehicleCode",
                 v.name AS "vehicleName",
+                v.branch_id AS "branchId",
+                b.branch_name AS "branchName",
                 ci.pickup_date::text AS "pickupDate",
                 ci.return_date::text AS "returnDate",
                 v.daily_price AS "dailyPrice",
@@ -105,11 +107,30 @@ public class CartRepository {
                 ON ci.cart_id = c.cart_id
             JOIN vehicles v
                 ON ci.vehicle_code = v.vehicle_code
+            JOIN branches b ON b.branch_id = v.branch_id
             WHERE c.user_id = ?
             ORDER BY ci.cart_item_id
             """;
 
         return jdbc.queryForList(sql, userId);
+    }
+
+    // Only change an item that belongs to the authenticated member's cart.
+    public int updateDates(Long userId, Long itemId, LocalDate pickupDate, LocalDate returnDate) {
+        return jdbc.update("""
+                UPDATE cart_items ci SET pickup_date = ?, return_date = ?
+                FROM rental_carts c
+                WHERE c.cart_id = ci.cart_id AND c.user_id = ? AND ci.cart_item_id = ?
+                """, pickupDate, returnDate, userId, itemId);
+    }
+
+    public String findVehicleCodeForItem(Long userId, Long itemId) {
+        List<String> codes = jdbc.query("""
+                SELECT ci.vehicle_code FROM cart_items ci
+                JOIN rental_carts c ON c.cart_id = ci.cart_id
+                WHERE c.user_id = ? AND ci.cart_item_id = ?
+                """, (rs, rowNum) -> rs.getString("vehicle_code"), userId, itemId);
+        return codes.isEmpty() ? null : codes.get(0);
     }
 
     // Xoa xe khoi gio cua dung nguoi dung

@@ -85,6 +85,23 @@ public class CartService {
     }
 
     @Transactional
+    public Map<String, Object> updateDates(Long userId, Long itemId,
+            LocalDate pickupDate, LocalDate returnDate) {
+        checkUser(userId);
+        String vehicleCode = repository.findVehicleCodeForItem(userId, itemId);
+        if (vehicleCode == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found");
+        }
+        if (!availabilityService.checkAvailability(vehicleCode, pickupDate, returnDate)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Vehicle is not available");
+        }
+        if (repository.updateDates(userId, itemId, pickupDate, returnDate) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found");
+        }
+        return getCart(userId);
+    }
+
+    @Transactional
     public void removeItem(Long userId, Long itemId) {
 
         checkUser(userId);

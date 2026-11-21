@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { api, el, money, notify, getUserId, isDateRange, imageFor, refreshCount, advance } = window.M3;
+  const { api, el, money, notify, isDateRange, imageFor, refreshCount, advance } = window.RentalUI;
   const itemsHost = document.getElementById('cart-items');
   const empty = document.getElementById('cart-empty');
   const warning = document.getElementById('cart-warning');
@@ -8,7 +8,7 @@
   async function load() {
     next.disabled = true;
     try {
-      const cart = await api(`/api/carts/${getUserId()}`);
+      const cart = await api('/api/carts/me');
       const items = cart.items || [];
       itemsHost.replaceChildren(); empty.hidden = items.length > 0;
       let total = 0;
@@ -32,13 +32,13 @@
           event.preventDefault();
           if (!isDateRange(pick.value, ret.value)) { notify('Please select a valid rental period.', true); return; }
           save.disabled = true;
-          try { await api(`/api/carts/${getUserId()}/items/${item.cartItemId}`, { method: 'PUT', body: JSON.stringify({ pickupDate: pick.value, returnDate: ret.value }) }); notify('Rental dates updated.'); await load(); }
+          try { await api(`/api/carts/me/items/${item.cartItemId}`, { method: 'PUT', body: JSON.stringify({ pickupDate: pick.value, returnDate: ret.value }) }); notify('Rental dates updated.'); await load(); }
           catch (error) { notify(error.message, true); } finally { save.disabled = false; }
         });
         remove.addEventListener('click', async () => {
           if (!window.confirm(`Remove ${item.vehicleName} from your cart?`)) return;
           remove.disabled = true;
-          try { await api(`/api/carts/${getUserId()}/items/${item.cartItemId}`, { method: 'DELETE' }); notify('Vehicle removed.'); await load(); }
+          try { await api(`/api/carts/me/items/${item.cartItemId}`, { method: 'DELETE' }); notify('Vehicle removed.'); await load(); }
           catch (error) { notify(error.message, true); } finally { remove.disabled = false; }
         });
         info.append(edit); card.append(img, info); itemsHost.append(card);
@@ -59,6 +59,6 @@
       await refreshCount();
     } catch (error) { itemsHost.replaceChildren(el('div', 'notice error', `Could not load cart: ${error.message}`)); empty.hidden = true; }
   }
-  next.addEventListener('click', () => { window.location.href = '/m3/checkout.html'; });
+  next.addEventListener('click', () => { window.location.href = '/rental/checkout.html'; });
   load();
 }());
