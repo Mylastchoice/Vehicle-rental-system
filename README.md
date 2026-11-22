@@ -134,3 +134,15 @@ Test cần PostgreSQL dùng database **`vehicle_rental_test` (trống)** qua bi�
   git add <file> && git commit    # kết thúc merge, rồi git push
   ```
 * Mỗi người chỉ sửa package/file của mình; cần đổi file dùng chung (entity, `SecurityConfig`, `GlobalExceptionHandler`, `pom.xml`) thì báo nhóm trước.
+
+
+PHÂN CÔNG THÀNH VIÊN
+
+TV	Phạm vi chủ trì	Bàn giao bắt buộc
+M1	Kiến trúc, cấu hình Java, DB schema, các class/shared contracts, GitHub, tích hợp.	Project Maven chạy, migration, entity/common enum, config security/database, README, tổng hợp PR.
+M2	UC03–UC06: tài khoản và xác thực.	Controller/Service/Giao diện auth & profile, email reset, password security, unit/integration tests.
+M3	UC07, UC08, UC14: giỏ xe, checkout, kiểm tra lịch và thanh toán.	Cart/Checkout/AvailabilityService, payment adapter, UI cart/checkout, race-condition tests.
+M4	UC09, UC10, UC13: lịch sử, hủy, quản trị booking.	BookingQuery/Cancellation/AdminService, UI lịch sử & quản trị, audit, refund tests.
+M5	UC01, UC02, UC11, UC12: danh mục, tìm kiếm, quản trị xe/người dùng.	Catalog/Search/VehicleAdmin/UserAdminService, UI catalog/admin, upload ảnh, tests.
+M6	QA Lead, Testing Document, CI, Docker, bug tracking; hỗ trợ test hệ thống.	Excel mẫu gốc đã chạy test, test reports, bug log, GitHub Actions, Docker, báo cáo QA.
+
