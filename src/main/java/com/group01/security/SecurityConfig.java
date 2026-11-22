@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -22,9 +23,20 @@ public class SecurityConfig {
                                                    ApiAccessDeniedHandler accessDeniedHandler) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .logout(logout -> logout.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .httpBasic(basic -> basic.authenticationEntryPoint(entryPoint))
-            .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(accessDeniedHandler))
+            .exceptionHandling(e -> e
+                .defaultAuthenticationEntryPointFor(
+                    entryPoint,
+                    request -> request.getRequestURI().startsWith("/api/")
+                )
+                .defaultAuthenticationEntryPointFor(
+                    new LoginUrlAuthenticationEntryPoint("/login"),
+                    request -> true
+                )
+                .accessDeniedHandler(accessDeniedHandler)
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/", "/index.html", "/*.html", "/rental/**", "/error", "/api/health",
