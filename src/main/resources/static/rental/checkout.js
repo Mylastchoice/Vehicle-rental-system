@@ -7,6 +7,13 @@
   const host = document.getElementById('checkout-items');
   let items = [];
   let sending = false;
+  form.querySelectorAll('[name="payment"]').forEach(option => {
+    option.addEventListener('change', () => {
+      form.querySelectorAll('.payment-option').forEach(label => {
+        label.classList.toggle('selected', label.querySelector('input').checked);
+      });
+    });
+  });
   async function initialize() {
     try {
       const data = await api('/api/carts/me');
@@ -29,6 +36,13 @@
       document.getElementById('checkout-total').textContent = money(sum);
       document.getElementById('checkout-deposit').textContent = money(Math.round(sum * .3));
       document.getElementById('pickup-location').value = items[0].branchName || '';
+      const online = form.querySelector('[value="ONLINE"]');
+      const options = await api('/api/payment-options').catch(() => ({ online: false }));
+      if (options.online) {
+        online.disabled = false;
+        online.closest('label').classList.remove('disabled');
+        document.getElementById('online-payment-hint').textContent = 'Stripe sandbox · use a test card';
+      }
       submit.disabled = false;
     } catch (error) { host.replaceChildren(el('div', 'notice error', `Cannot load cart: ${error.message}`)); }
   }
@@ -49,11 +63,15 @@
       renterPhone: document.getElementById('renter-phone').value.trim(),
       renterLicenseNumber: document.getElementById('renter-license').value.trim(),
       pickupLocation: document.getElementById('pickup-location').value.trim(),
-      paymentMethod: 'AT_PICKUP'
+      paymentMethod: form.elements.payment.value
     };
     try {
       const result = await api('/api/checkout', { method: 'POST', body: JSON.stringify(body) });
       if (!result.bookingId || result.bookingStatus !== 'Pending') throw new Error('Unexpected booking response from backend. Check the server before retrying.');
+      if (result.paymentMethod === 'ONLINE') {
+        window.location.href = `/bookings/${encodeURIComponent(result.bookingId)}`;
+        return;
+      }
       // Save only a display snapshot. Real data remains in PostgreSQL; session storage is NOT proof of payment.
       sessionStorage.setItem('morrow-booking-confirmation', JSON.stringify(result));
       window.location.href = `/rental/confirmation.html?bookingId=${encodeURIComponent(result.bookingId)}`;

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MORROW - Booking details</title>
+<link rel="stylesheet" th:href="@{/rental/style.css}"><style>main{max-width:900px;margin:45px auto;padding:24px}.panel{background:white;padding:24px;border-radius:12px;margin-bottom:20px}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}button{padding:10px 18px;cursor:pointer}</style></head>
+<body><main>
+  <p><a th:href="@{/bookings}">My bookings</a> / Details</p>
+  <h1 th:text="${'Booking #' + detail.booking.bookingId}"></h1>
+  <p th:if="${message}" th:text="${message}"></p>
+  <section class="panel"><p><b>Status:</b> <span th:text="${detail.booking.status}"></span></p>
+  <p><b>Pickup:</b> <span th:text="${detail.booking.pickupDate}"></span> — <span th:text="${detail.booking.pickupLocation}"></span> (<span th:text="${detail.booking.pickupBranchId}"></span>)</p>
+  <p><b>Scheduled return:</b> <span th:text="${detail.booking.returnDate}"></span> (<span th:text="${detail.booking.returnBranchId}"></span>)</p>
+  <p th:if="${detail.booking.requestedReturnDate}"><b>Requested early return:</b> <span th:text="${detail.booking.requestedReturnDate}"></span></p>
+  <p th:if="${detail.booking.actualReturnDate}"><b>Actual return:</b> <span th:text="${detail.booking.actualReturnDate}"></span></p>
+  <p><b>Total:</b> <span th:text="${detail.booking.totalAmount}"></span> VND</p>
+  <p><b>Deposit:</b> <span th:text="${detail.booking.depositAmount}"></span> VND</p>
+  <p><b>Payment method:</b> <span th:text="${detail.booking.paymentMethod}"></span></p>
+  <p th:if="${depositStatus}"><b>Sandbox deposit status:</b> <span th:text="${depositStatus}"></span></p>
+  <form th:if="${onlineEnabled == true and depositStatus == 'Pending' and detail.booking.status == 'Pending'}"
+        th:action="@{/bookings/{id}/payment(id=${detail.booking.bookingId})}" method="post">
+    <button type="submit">Open Stripe sandbox checkout</button>
+    <a th:href="@{/bookings/{id}/payment/return(id=${detail.booking.bookingId})}">Check payment</a>
+  </form></section>
+  <section class="panel"><h2>Vehicles</h2><table><tr><th>Vehicle</th><th>Dates</th><th>Subtotal (VND)</th></tr>
+  <tr th:each="v : ${detail.vehicles}"><td th:text="${v.vehicleName + ' (' + v.vehicleCode + ')'}"></td>
+    <td th:text="|${v.pickupDate} – ${v.returnDate}|"></td><td th:text="${v.subtotal}"></td></tr></table></section>
+  <form th:if="${detail.booking.status == 'Pending' or detail.booking.status == 'Confirmed'}"
+        th:action="@{/bookings/{id}/cancel(id=${detail.booking.bookingId})}" method="post"
+        onsubmit="return confirm('Cancel this booking?')"><button type="submit">Cancel booking</button></form>
+  <form th:if="${detail.booking.status == 'Picked up' and detail.booking.requestedReturnDate == null and today.isBefore(detail.booking.returnDate)}"
+        th:action="@{/bookings/{id}/early-return(id=${detail.booking.bookingId})}" method="post">
+    <label>Requested return date <input type="date" name="date" th:min="${today}"
+           th:max="${detail.booking.returnDate.minusDays(1)}" required></label>
+    <button type="submit">Request early return</button>
+  </form>
+</main></body></html>

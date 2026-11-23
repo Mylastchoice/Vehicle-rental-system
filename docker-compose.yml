@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16
+    container_name: vehicle-rental-db
+    environment:
+      POSTGRES_DB: vehicle_rental_system
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vehicle_rental_system"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build: .
+    container_name: vehicle-rental-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/vehicle_rental_system
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Ho_Chi_Minh"
+      MORROW_STRIPE_SECRET_KEY: ${MORROW_STRIPE_SECRET_KEY:-}
+      MORROW_STRIPE_WEBHOOK_SECRET: ${MORROW_STRIPE_WEBHOOK_SECRET:-}
+      MORROW_STRIPE_APP_ORIGIN: http://localhost:8080
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  db_data:

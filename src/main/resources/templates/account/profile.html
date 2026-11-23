@@ -60,9 +60,9 @@
         <label class="label" for="gender">Gender</label>
         <select class="input" id="gender" name="gender">
           <option value="">-- Select gender --</option>
-          <option value="Male" th:selected="${user?.gender != null and #strings.equalsIgnoreCase(user.gender, 'Male')}">Male</option>
-          <option value="Female" th:selected="${user?.gender != null and #strings.equalsIgnoreCase(user.gender, 'Female')}">Female</option>
-          <option value="Other" th:selected="${user?.gender != null and #strings.equalsIgnoreCase(user.gender, 'Other')}">Other</option>
+          <option value="Male" th:selected="${#strings.equalsIgnoreCase(user?.gender, 'Male') or #strings.equalsIgnoreCase(user?.gender, 'M')}">Male</option>
+          <option value="Female" th:selected="${#strings.equalsIgnoreCase(user?.gender, 'Female') or #strings.equalsIgnoreCase(user?.gender, 'F')}">Female</option>
+          <option value="Other" th:selected="${#strings.equalsIgnoreCase(user?.gender, 'Other') or #strings.equalsIgnoreCase(user?.gender, 'O')}">Other</option>
         </select>
       </div>
 

@@ -41,11 +41,13 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/", "/index.html", "/*.html", "/rental/**", "/error", "/api/health",
                     "/login", "/register", "/forgot-password", "/reset-password", "/logout",
+                    "/api/payment-options", "/api/payments/stripe/webhook",
                     "/css/**", "/js/**", "/images/**", "/assets/**", "/favicon.ico"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/vehicles/**", "/api/categories/**", "/api/branches/**").permitAll()
                 .requestMatchers("/api/admin/**", "/api/database").hasRole("ADMIN")
-                .requestMatchers("/api/member/**").hasRole("MEMBER")
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/member/**", "/profile", "/profile/**", "/account/profile").hasRole("MEMBER")
                 .anyRequest().authenticated()
             );
 

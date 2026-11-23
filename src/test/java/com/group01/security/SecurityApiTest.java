@@ -1,10 +1,19 @@
 package com.group01.security;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group01.entity.Administrator;
 import com.group01.entity.Branch;
 import com.group01.entity.Category;
@@ -18,14 +27,20 @@ import com.group01.repository.CategoryRepository;
 import com.group01.repository.UserRepository;
 import com.group01.repository.VehicleRepository;
 import com.group01.support.RequiresPostgres;
+import com.group01.service.StripeCheckoutGateway;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,12 +61,17 @@ class SecurityApiTest {
     @Autowired CategoryRepository categories;
     @Autowired BranchRepository branches;
     @Autowired VehicleRepository vehicles;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired ObjectMapper json;
+    @MockitoBean StripeCheckoutGateway stripe;
 
     private String memberEmail;
     private String adminEmail;
     private String userAdminEmail;
     private String lockedEmail;
     private Long categoryId;
+    private Integer branchId;
+    private String vehicleCode;
 
     private User user(String email, UserRole role, UserStatus status) {
         User u = new User();
@@ -59,6 +79,7 @@ class SecurityApiTest {
         u.setEmail(email);
         u.setPasswordHash(encoder.encode(PASSWORD));
         u.setPhone("0901234567");
+        u.setLicenseNumber("079200001111");
         u.setRole(role);
         u.setStatus(status);
         return users.save(u);
@@ -86,10 +107,11 @@ class SecurityApiTest {
         Branch b = new Branch();
         b.setBranchName("Branch-" + n);
         b.setAddress("Somewhere");
-        branches.save(b);
+        branchId = branches.save(b).getBranchId();
         for (int i = 1; i <= 3; i++) {
             Vehicle v = new Vehicle();
             v.setVehicleCode("SEC-" + n % 100000 + "-" + i);
+            if (i == 1) vehicleCode = v.getVehicleCode();
             v.setCategory(c);
             v.setBranch(b);
             v.setName(i == 1 ? "Honda Vision" : "Yamaha Exciter " + i);
@@ -157,6 +179,110 @@ class SecurityApiTest {
     @Test
     void adminIsNotAllowedInMemberArea() throws Exception {
         mvc.perform(get("/api/member/ping").with(httpBasic(adminEmail, PASSWORD))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void administratorCanSignInFromTheForm() throws Exception {
+        var login = mvc.perform(post("/login").param("email", adminEmail).param("password", PASSWORD))
+                .andExpect(redirectedUrl("/admin/bookings")).andReturn();
+        var session = (MockHttpSession) login.getRequest().getSession(false);
+        mvc.perform(get("/admin/bookings").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Manage bookings")));
+        mvc.perform(get("/profile").session(session)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void memberCanSaveTheirProfileFromTheForm() throws Exception {
+        var login = mvc.perform(post("/login").param("email", memberEmail).param("password", PASSWORD))
+                .andExpect(redirectedUrl("/")).andReturn();
+        var session = (MockHttpSession) login.getRequest().getSession(false);
+        mvc.perform(post("/profile/update").session(session)
+                        .param("fullName", "Updated Member").param("phone", "0901112223")
+                        .param("dateOfBirth", "2000-01-15").param("gender", "Female")
+                        .param("address", "District 1").param("licenseNumber", "079200001111"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Profile updated successfully.")));
+        mvc.perform(get("/profile").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Updated Member")))
+                .andExpect(content().string(containsString("079200001111")));
+    }
+
+    private Long booking(String status, String method) {
+        Long userId = users.findByEmail(memberEmail).orElseThrow().getUserId();
+        return jdbc.queryForObject("""
+                INSERT INTO bookings (user_id, pickup_branch_id, return_branch_id, pickup_location,
+                    pickup_date, return_date, renter_name, renter_phone, renter_license_number,
+                    total_amount, deposit_amount, payment_method, status)
+                VALUES (?, ?, ?, 'Branch', ?, ?, 'Member', '0901234567', '079200001111', 1000000, 300000, ?, ?)
+                RETURNING booking_id
+                """, Long.class, userId, branchId, branchId, LocalDate.now(), LocalDate.now().plusDays(3), method, status);
+    }
+
+    @Test
+    void earlyReturnIsRequestedByMemberAndRecordedByAdmin() throws Exception {
+        Long id = booking("Picked up", "AT_PICKUP");
+        String path = "/bookings/" + id;
+        mvc.perform(get(path).with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(content().string(containsString("Request early return")));
+        mvc.perform(post(path + "/early-return").with(httpBasic(memberEmail, PASSWORD))
+                        .param("date", LocalDate.now().toString()))
+                .andExpect(redirectedUrl(path));
+        mvc.perform(get("/admin" + path).with(httpBasic(adminEmail, PASSWORD)))
+                .andExpect(content().string(containsString("Confirm vehicle returned")));
+        mvc.perform(post("/admin" + path + "/status").with(httpBasic(adminEmail, PASSWORD))
+                        .param("status", "COMPLETED"))
+                .andExpect(redirectedUrl("/admin" + path));
+        mvc.perform(get("/api" + path).with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(jsonPath("$.booking.status").value("Completed"))
+                .andExpect(jsonPath("$.booking.returnDate").value(LocalDate.now().plusDays(3).toString()))
+                .andExpect(jsonPath("$.booking.requestedReturnDate").value(LocalDate.now().toString()))
+                .andExpect(jsonPath("$.booking.actualReturnDate").value(LocalDate.now().toString()));
+    }
+
+    @Test
+    void onlineDepositRequiresStripeToVerifyTheExactAmount() throws Exception {
+        vehicles.flush();
+        when(stripe.enabled()).thenReturn(true);
+        var dates = json.createObjectNode().put("vehicleCode", vehicleCode)
+                .put("pickupDate", LocalDate.now().plusDays(1).toString())
+                .put("returnDate", LocalDate.now().plusDays(3).toString());
+        mvc.perform(post("/api/carts/me/items").with(httpBasic(memberEmail, PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON).content(dates.toString()))
+                .andExpect(status().isOk());
+        var checkout = mvc.perform(post("/api/checkout").with(httpBasic(memberEmail, PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                            {"renterName":"Member","renterPhone":"0901234567","renterLicenseNumber":"079200001111",
+                             "pickupLocation":"Branch","paymentMethod":"ONLINE"}
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentMethod").value("ONLINE"))
+                .andExpect(jsonPath("$.paymentStatus").value("Pending"))
+                .andReturn();
+        Long id = json.readTree(checkout.getResponse().getContentAsString()).path("bookingId").asLong();
+        String path = "/bookings/" + id;
+        when(stripe.create(eq(id), eq(60000L), anyString())).thenReturn(json.createObjectNode()
+                .put("id", "cs_test_morrow").put("url", "https://checkout.stripe.com/c/pay/cs_test_morrow"));
+        mvc.perform(get(path).with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(content().string(containsString("Open Stripe sandbox checkout")));
+        mvc.perform(post(path + "/payment").with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(status().isSeeOther())
+                .andExpect(header().string("Location", "https://checkout.stripe.com/c/pay/cs_test_morrow"));
+
+        var session = json.createObjectNode().put("id", "cs_test_morrow").put("payment_status", "paid")
+                .put("currency", "vnd");
+        when(stripe.retrieve("cs_test_morrow")).thenReturn(session.put("amount_total", 1));
+        mvc.perform(get(path + "/payment/return").with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(redirectedUrl(path));
+        mvc.perform(get(path).with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(content().string(containsString("Open Stripe sandbox checkout")));
+
+        session.put("amount_total", 60000);
+        mvc.perform(get(path + "/payment/return").with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(redirectedUrl(path));
+        mvc.perform(get("/admin" + path).with(httpBasic(adminEmail, PASSWORD)))
+                .andExpect(content().string(containsString("Sandbox deposit status: <b>Paid</b>")));
     }
 
     // ------------------------------------------------------------------ catalogue + error format

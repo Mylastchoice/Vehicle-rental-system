@@ -1,7 +1,5 @@
 package com.group01.controller;
 
-import com.group01.entity.User;
-import com.group01.security.DatabaseUserDetailsService;
 import com.group01.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -30,9 +28,6 @@ import java.util.Random;
 public class AuthController {
 
     private final AuthService authService;
-
-    @Autowired(required = false)
-    private DatabaseUserDetailsService userDetailsService;
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
@@ -195,21 +190,16 @@ public class AuthController {
                               HttpServletRequest request,
                               Model model) {
         try {
-            User user = authService.login(email, password);
-            session.setAttribute("loggedInUser", user);
-            session.setAttribute("userId", user.getUserId());
-
-            if (userDetailsService != null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContext context = SecurityContextHolder.createEmptyContext();
-                context.setAuthentication(authToken);
-                SecurityContextHolder.setContext(context);
-                session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-            }
-
-            return "redirect:" + getBaseUrl(request) + "/";
+            UserDetails user = authService.login(email, password);
+            var authentication = UsernamePasswordAuthenticationToken.authenticated(
+                    user.getUsername(), null, user.getAuthorities());
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(authentication);
+            request.changeSessionId();
+            SecurityContextHolder.setContext(context);
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+            boolean admin = user.getAuthorities().stream().anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+            return admin ? "redirect:/admin/bookings" : "redirect:/";
         } catch (IllegalArgumentException | IllegalStateException e) {
             model.addAttribute("serverError", e.getMessage());
             model.addAttribute("email", email);

@@ -2,6 +2,9 @@ package com.group01.service;
 
 import com.group01.entity.User;
 import com.group01.repository.UserRepository;
+import com.group01.security.DatabaseUserDetailsService;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +18,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final DatabaseUserDetailsService userDetailsService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Lưu tạm số lần đăng nhập sai và thời gian khóa tài khoản (15 phút)
@@ -25,8 +29,9 @@ public class AuthService {
     private final Map<String, String> resetTokenEmail = new HashMap<>();
     private final Map<String, LocalDateTime> resetTokenExpiry = new HashMap<>();
 
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository, DatabaseUserDetailsService userDetailsService) {
         this.userRepository = userRepository;
+        this.userDetailsService = userDetailsService;
     }
 
     public User register(String fullName, String phone, String email, String password, String confirmPassword) {
@@ -64,7 +69,7 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-    public User login(String email, String password) {
+    public UserDetails login(String email, String password) {
         String mail = email == null ? "" : email.trim().toLowerCase();
         if (mail.isEmpty() || password == null || password.isEmpty()) {
             throw new IllegalArgumentException("Please enter both email and password.");
@@ -76,10 +81,15 @@ public class AuthService {
             throw new IllegalStateException("Account is locked due to 5 failed attempts. Try again in 15 minutes.");
         }
 
-        User user = userRepository.findByEmail(mail).orElse(null);
+        UserDetails user;
+        try {
+            user = userDetailsService.loadUserByUsername(mail);
+        } catch (UsernameNotFoundException e) {
+            user = null;
+        }
 
         // Kiểm tra email và mật khẩu đã băm BCrypt
-        if (user == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
             int count = failedAttempts.getOrDefault(mail, 0) + 1;
             failedAttempts.put(mail, count);
 
@@ -92,7 +102,7 @@ public class AuthService {
             throw new IllegalArgumentException("Incorrect email or password. " + remaining + " attempt(s) left.");
         }
 
-        if (user.getStatus() == null || !"ACTIVE".equalsIgnoreCase(user.getStatus().name())) {
+        if (!user.isEnabled()) {
             throw new IllegalStateException("Your account is inactive.");
         }
 

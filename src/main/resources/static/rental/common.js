@@ -63,6 +63,22 @@
     try { count.textContent = (await api('/api/carts/me')).items.length; }
     catch (_) { count.textContent = '0'; }
   }
+  async function refreshAccountLink() {
+    const link = document.getElementById('account-link');
+    if (!link) return;
+    const response = await fetch('/api/me', { headers: { Accept: 'application/json' } }).catch(() => null);
+    if (!response?.ok) return;
+    const { roles } = await response.json();
+    if (roles.includes('ROLE_ADMIN')) {
+      link.href = '/admin/bookings';
+      link.textContent = 'Manage bookings ↗';
+    } else if (roles.includes('ROLE_MEMBER')) {
+      link.href = '/profile';
+      link.textContent = 'My profile ↗';
+      document.getElementById('bookings-link').hidden = false;
+    }
+  }
   document.addEventListener('DOMContentLoaded', refreshCount);
+  document.addEventListener('DOMContentLoaded', refreshAccountLink);
   window.RentalUI = { api, el, money, notify, isDateRange, setupDates, imageFor, advance, refreshCount };
 }());

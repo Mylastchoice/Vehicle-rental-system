@@ -168,3 +168,32 @@ Test cần PostgreSQL dùng database **`vehicle_rental_test` (trống)** qua bi�
   git add <file> && git commit    # kết thúc merge, rồi git push
   ```
 * Mỗi người chỉ sửa package/file của mình; cần đổi file dùng chung (entity, `SecurityConfig`, `GlobalExceptionHandler`, `pom.xml`) thì báo nhóm trước.
+
+## Chạy demo trên máy bằng Docker
+
+```powershell
+# Run from the repository root
+docker compose up --build -d
+docker compose logs -f app
+```
+
+Sau khi log báo ứng dụng khởi động, nhấn Ctrl+C để thoát chế độ xem log. Mở [Morrow trên localhost](http://localhost:8080). Spring Boot và PostgreSQL chạy trong các container trên máy demo.
+
+Nạp dữ liệu mẫu một lần trên database Docker mới, sau khi Flyway tạo bảng.
+
+```powershell
+Get-Content -Raw .\database\dev_seed.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d vehicle_rental_system
+```
+
+- Khách thuê đăng nhập bằng `minh.nguyen@gmail.com` / `123456`. Trang chủ có **My profile** và **My bookings** sau khi đăng nhập.
+- Admin đăng nhập bằng `admin@morrow.vn` / `Admin@123`. Form đăng nhập chuyển admin đến **Manage bookings**.
+- Để demo trả sớm, đặt xe với một khoảng bắt đầu hôm nay, rồi dùng admin xác nhận đơn và ghi nhận nhận xe. Khách vào **My bookings**, chọn ngày trả trước lịch và gửi yêu cầu. Khi nhận lại xe, admin chọn **Confirm vehicle returned**. Trang chi tiết giữ ngày hẹn ban đầu và hiển thị cả ngày đề nghị lẫn ngày trả thực tế. Số tiền thuê giữ theo đơn ban đầu.
+
+### Thanh toán online sandbox
+
+Đặt `MORROW_STRIPE_SECRET_KEY` thành khóa `sk_test_` của Stripe sandbox trong môi trường PowerShell hoặc file `.env` riêng của máy. Chạy `docker compose up -d app` để cập nhật biến môi trường. Chọn **Pay online** khi đặt xe, mở **Stripe sandbox checkout** trong chi tiết đơn, rồi dùng thẻ test `4242 4242 4242 4242`, ngày hết hạn tương lai và CVC test. Khi Stripe chuyển về ứng dụng, máy chủ xác minh số tiền và cập nhật tiền cọc. Admin có thể xác nhận đơn sau khi hệ thống ghi nhận tiền cọc.
+
+Nếu cần cập nhật ngay cả khi người dùng đóng trang thanh toán, chạy Stripe CLI với `stripe listen --events checkout.session.completed --forward-to localhost:8080/api/payments/stripe/webhook`. Đặt signing secret CLI in ra vào `MORROW_STRIPE_WEBHOOK_SECRET` rồi chạy lại `docker compose up -d app`. Người dùng cũng có thể bấm **Check payment** để đối chiếu với Stripe. Xem [hướng dẫn thẻ test Stripe](https://docs.stripe.com/testing).
+
+Dừng demo bằng `docker compose down`.
+

@@ -2,6 +2,7 @@ package com.group01;
 
 import com.group01.entity.User;
 import com.group01.repository.UserRepository;
+import com.group01.security.DatabaseUserDetailsService;
 import com.group01.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private DatabaseUserDetailsService userDetailsService;
 
     @InjectMocks
     private AuthService authService;
@@ -67,7 +71,9 @@ class AuthServiceTest {
 
     @Test
     void login_fiveFailedAttempts_locksFor15Minutes() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(sampleUser));
+        when(userDetailsService.loadUserByUsername(sampleUser.getEmail())).thenReturn(
+                org.springframework.security.core.userdetails.User.withUsername(sampleUser.getEmail())
+                        .password(sampleUser.getPasswordHash()).roles("MEMBER").build());
 
         for (int i = 0; i < 4; i++) {
             assertThrows(IllegalArgumentException.class, () ->

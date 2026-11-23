@@ -1,0 +1,20 @@
+<!doctype html><html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MORROW - Booking administration</title>
+<link rel="stylesheet" th:href="@{/rental/style.css}"><style>main{max-width:1100px;margin:45px auto;padding:24px}table{width:100%;border-collapse:collapse;background:white}td,th{padding:12px;border-bottom:1px solid #ddd;text-align:left}input,select,button{padding:8px}.pager{display:flex;gap:15px;margin-top:20px}</style></head>
+<body><main><p><a th:href="@{/rental/index.html}">Home</a> / Admin · <a th:href="@{/logout}">Log out</a></p><h1>Manage bookings</h1>
+<form method="get" th:action="@{/admin/bookings}">
+ <label>Status <select name="status"><option value="">All</option>
+ <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s.dbValue}" th:selected="${s.name() == statusFilter}"></option></select></label>
+ <label>Pickup from <input type="date" name="from" th:value="${from}"></label>
+ <label>Pickup to <input type="date" name="to" th:value="${to}"></label>
+ <button type="submit">Filter</button></form>
+<p th:if="${#lists.isEmpty(history.items)}">No bookings found</p>
+<table th:unless="${#lists.isEmpty(history.items)}"><tr><th>Booking</th><th>Member</th><th>Pickup</th><th>Total</th><th>Status</th><th></th></tr>
+<tr th:each="b : ${history.items}"><td th:text="${b.bookingId}"></td><td th:text="${b.userId}"></td><td th:text="${b.pickupDate}"></td>
+<td th:text="${b.totalAmount}"></td><td><span th:text="${b.status}"></span>
+<strong th:if="${b.status == 'Picked up' and b.requestedReturnDate != null}"> · Early return requested</strong></td>
+<td><a th:href="@{/admin/bookings/{id}(id=${b.bookingId})}">View</a></td></tr></table>
+<div class="pager"><a th:if="${history.hasPrevious()}" th:href="@{/admin/bookings(page=${history.page - 1},status=${statusFilter},from=${from},to=${to})}">Previous</a>
+<span th:text="${'Page ' + (history.page + 1) + ' of ' + history.totalPages}"></span>
+<a th:if="${history.hasNext()}" th:href="@{/admin/bookings(page=${history.page + 1},status=${statusFilter},from=${from},to=${to})}">Next</a></div>
+</main></body></html>
