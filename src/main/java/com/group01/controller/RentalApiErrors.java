@@ -8,7 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(assignableTypes = {
     CartController.class, CheckoutController.class, AvailabilityController.class,
-    VehicleOptionsController.class
+    VehicleOptionsController.class, BookingController.class, BookingAdminController.class
 })
 public class RentalApiErrors {
     @ExceptionHandler(ResponseStatusException.class)

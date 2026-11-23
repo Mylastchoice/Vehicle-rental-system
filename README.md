@@ -109,7 +109,7 @@ Lưu ý: đây là các API backend. Giao diện quản trị frontend chưa đ�
 * **Member**: `ROLE_MEMBER` – bảng `users` với `role = MEMBER`.
 * **Admin**: `ROLE_ADMIN` – mọi dòng của bảng `administrators` và bảng `users` có `role = ADMIN`.
 * Tài khoản `status = INACTIVE` không đăng nhập được.
-* API **stateless** (HTTP Basic, không session, CSRF tắt vì không dùng cookie). Muốn dùng JWT sau này chỉ cần thay cấu hình trong `security/SecurityConfig.java`.
+* API hỗ trợ HTTP Basic, đồng thời M2 sử dụng đăng nhập **session** cho các trang HTML. Lưu ý: CSRF hiện đang tắt trong cấu hình gốc, phải rà soát bảo mật trước khi triển khai công khai.
 * Khi thêm endpoint mới: đặt dưới `/api/member/**` hoặc `/api/admin/**` để tự có quyền đúng, hoặc thêm rule trong `SecurityConfig`. Mặc định mọi đường dẫn khác **phải đăng nhập**.
 
 ## 6. Xử lý lỗi chung – việc 11
@@ -168,6 +168,14 @@ Test cần PostgreSQL dùng database **`vehicle_rental_test` (trống)** qua bi�
   git add <file> && git commit    # kết thúc merge, rồi git push
   ```
 * Mỗi người chỉ sửa package/file của mình; cần đổi file dùng chung (entity, `SecurityConfig`, `GlobalExceptionHandler`, `pom.xml`) thì báo nhóm trước.
+
+## M4 Booking Management (newly added, verification required)
+
+- Member: `/bookings` (history), `/bookings/{id}` (details), `POST /bookings/{id}/cancel`; JSON: `GET /api/bookings`, `GET /api/bookings/{id}`, `POST /api/bookings/{id}/cancel`.
+- Administrator: `/admin/bookings`, `/admin/bookings/{id}`, `POST /admin/bookings/{id}/status`; JSON: `GET /api/admin/bookings?status=PENDING`, `PATCH /api/admin/bookings/{id}/status` with `{"status":"CONFIRMED"}`.
+- Only owners can see/cancel their own bookings. Only admins can manage booking statuses.
+- No extra SQL migration; existing PostgreSQL tables are reused. See `M4_IMPLEMENTATION_NOTES.md` for important refund, date, auditing, mail and test limitations.
+- This implementation was created for the new cleaned submission ZIP and **has not inherited the pass status of the old Group 01 testing spreadsheet**. Re-test it.
 
 ## Chạy demo trên máy bằng Docker
 

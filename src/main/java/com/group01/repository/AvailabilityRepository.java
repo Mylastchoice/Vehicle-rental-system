@@ -5,19 +5,19 @@ import java.time.LocalDate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-@Repository
+@Repository// repository để xử lý các truy vấn liên quan đến tính khả dụng của xe
 public class AvailabilityRepository {
 
-    private final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbc;// JdbcTemplate để thực hiện các truy vấn SQL
 
     public AvailabilityRepository(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
+        this.jdbc = jdbc;// constructor để khởi tạo AvailabilityRepository với JdbcTemplate
     }
 
     public boolean isAvailable(
             String vehicleCode,
             LocalDate pickupDate,
-            LocalDate returnDate) {
+            LocalDate returnDate) {// kiểm tra tính khả dụng của xe dựa trên mã xe và ngày thuê/trả
 
         String sql = """
             SELECT EXISTS (
@@ -40,7 +40,7 @@ public class AvailabilityRepository {
                         AND bd.return_date > ?
                   )
             )
-            """;
+            """;// truy vấn SQL để kiểm tra xem xe có khả dụng hay không dựa trên mã xe và ngày thuê/trả
 
         Boolean result = jdbc.queryForObject(
             sql,
@@ -48,7 +48,7 @@ public class AvailabilityRepository {
             vehicleCode,
             returnDate,
             pickupDate
-        );
+        );// thực hiện truy vấn SQL và trả về kết quả là một Boolean
 
         return Boolean.TRUE.equals(result);
     }

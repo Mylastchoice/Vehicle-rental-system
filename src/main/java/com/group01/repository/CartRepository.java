@@ -9,9 +9,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class CartRepository {
+public class CartRepository {// repository để xử lý các truy vấn liên quan đến giỏ hàng của người dùng
 
-    private final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbc;// JdbcTemplate để thực hiện các truy vấn SQL
 
     public CartRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -28,9 +28,9 @@ public class CartRepository {
 
         Boolean result = jdbc.queryForObject(
             sql, Boolean.class, userId
-        );
+        );// thực hiện truy vấn SQL để kiểm tra xem người dùng có tồn tại hay không dựa trên userId
 
-        return Boolean.TRUE.equals(result);
+        return Boolean.TRUE.equals(result);// trả về true nếu người dùng tồn tại, ngược lại trả về false
     }
 
     // Lay gio hang, neu chua co thi tao moi
@@ -40,7 +40,7 @@ public class CartRepository {
             INSERT INTO rental_carts (user_id)
             VALUES (?)
             ON CONFLICT (user_id) DO NOTHING
-            """;
+            """;// truy vấn SQL để tạo mới giỏ hàng cho người dùng nếu chưa có, nếu đã có thì không làm gì cả
 
         jdbc.update(insertSql, userId);
 
@@ -52,7 +52,7 @@ public class CartRepository {
 
         return jdbc.queryForObject(
             selectSql, Long.class, userId
-        );
+        );// thực hiện truy vấn SQL để lấy ID của giỏ hàng và trả về kết quả
     }
 
     // Them xe, neu xe da co thi cap nhat ngay thue
@@ -60,7 +60,7 @@ public class CartRepository {
             Long cartId,
             String vehicleCode,
             LocalDate pickupDate,
-            LocalDate returnDate) {
+            LocalDate returnDate) {// thêm xe vào giỏ hàng, nếu xe đã có trong giỏ hàng thì cập nhật ngày thuê và ngày trả xe
 
         String sql = """
             INSERT INTO cart_items
@@ -71,7 +71,7 @@ public class CartRepository {
             DO UPDATE SET
                 pickup_date = EXCLUDED.pickup_date,
                 return_date = EXCLUDED.return_date
-            """;
+            """;// truy vấn SQL để thêm xe vào giỏ hàng, nếu xe đã có trong giỏ hàng thì cập nhật ngày thuê và ngày trả xe
 
         jdbc.update(
             sql,
@@ -79,12 +79,12 @@ public class CartRepository {
             vehicleCode,
             pickupDate,
             returnDate
-        );
+        );// thực hiện truy vấn SQL để thêm xe vào giỏ hàng hoặc cập nhật ngày thuê và ngày trả xe nếu xe đã có trong giỏ hàng
     }
 
     // Xem danh sach xe trong gio
     public List<Map<String, Object>> getItems(Long userId) {
-
+// truy vấn SQL để lấy danh sách các xe trong giỏ hàng của người dùng dựa trên userId
         String sql = """
             SELECT
                 ci.cart_item_id AS "cartItemId",
@@ -113,7 +113,7 @@ public class CartRepository {
             """;
 
         return jdbc.queryForList(sql, userId);
-    }
+    }// thực hiện truy vấn SQL để lấy danh sách các xe trong giỏ hàng của người dùng và trả về kết quả dưới dạng List<Map<String, Object>>
 
     // Only change an item that belongs to the authenticated member's cart.
     public int updateDates(Long userId, Long itemId, LocalDate pickupDate, LocalDate returnDate) {
@@ -122,7 +122,7 @@ public class CartRepository {
                 FROM rental_carts c
                 WHERE c.cart_id = ci.cart_id AND c.user_id = ? AND ci.cart_item_id = ?
                 """, pickupDate, returnDate, userId, itemId);
-    }
+    }// thực hiện truy vấn SQL để cập nhật ngày thuê và ngày trả xe cho một mục trong giỏ hàng của người dùng dựa trên userId và itemId
 
     public String findVehicleCodeForItem(Long userId, Long itemId) {
         List<String> codes = jdbc.query("""
@@ -131,7 +131,7 @@ public class CartRepository {
                 WHERE c.user_id = ? AND ci.cart_item_id = ?
                 """, (rs, rowNum) -> rs.getString("vehicle_code"), userId, itemId);
         return codes.isEmpty() ? null : codes.get(0);
-    }
+    }// thực hiện truy vấn SQL để tìm mã xe cho một mục trong giỏ hàng của người dùng dựa trên userId và itemId, nếu không tìm thấy thì trả về null
 
     // Xoa xe khoi gio cua dung nguoi dung
     public int deleteItem(Long userId, Long itemId) {
@@ -144,7 +144,7 @@ public class CartRepository {
               AND ci.cart_item_id = ?
             """;
 
-        return jdbc.update(sql, userId, itemId);
+        return jdbc.update(sql, userId, itemId);// thực hiện truy vấn SQL để xóa một mục trong giỏ hàng của người dùng dựa trên userId và itemId, trả về số lượng bản ghi bị ảnh hưởng
     }
 }
 

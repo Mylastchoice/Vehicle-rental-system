@@ -11,7 +11,7 @@ import com.group01.repository.AvailabilityRepository;
 
 @Service
 public class AvailabilityService {
-
+// service để xử lý logic liên quan đến tính khả dụng của xe
     private final AvailabilityRepository repository;
 
     public AvailabilityService(
@@ -22,7 +22,7 @@ public class AvailabilityService {
     public boolean checkAvailability(
             String vehicleCode,
             LocalDate pickupDate,
-            LocalDate returnDate) {
+            LocalDate returnDate) {// kiểm tra tính khả dụng của xe dựa trên mã xe và ngày thuê/trả
 
         // Kiem tra ma xe
         if (vehicleCode == null || vehicleCode.isBlank()) {

@@ -24,3 +24,5 @@ Important:
   development environment before merging.
 - The administration work here exposes backend REST APIs. It does not create a
   web administration frontend.
+
+Cleaned submission note: duplicate standalone com.morrow.vehiclerental code and H2 demo templates were removed in this newly built ZIP. Integrated com.group01 M5 code was retained.
