@@ -124,9 +124,13 @@ class SecurityApiTest {
     // ------------------------------------------------------------------ guest
     @Test
     void guestCanReadHealthAndCatalogue() throws Exception {
+        vehicles.flush();
         mvc.perform(get("/api/health")).andExpect(status().isOk());
         mvc.perform(get("/api/categories")).andExpect(status().isOk());
         mvc.perform(get("/api/branches")).andExpect(status().isOk());
+        mvc.perform(get("/api/vehicle-options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].vehicleCode").exists());
         mvc.perform(get("/api/vehicles").param("categoryId", String.valueOf(categoryId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(3))
@@ -225,10 +229,12 @@ class SecurityApiTest {
         Long id = booking("Picked up", "AT_PICKUP");
         String path = "/bookings/" + id;
         mvc.perform(get(path).with(httpBasic(memberEmail, PASSWORD)))
-                .andExpect(content().string(containsString("Request early return")));
-        mvc.perform(post(path + "/early-return").with(httpBasic(memberEmail, PASSWORD))
-                        .param("date", LocalDate.now().toString()))
+                .andExpect(content().string(containsString("Yêu cầu trả xe ngay")));
+        mvc.perform(post(path + "/return-now").with(httpBasic(memberEmail, PASSWORD)))
                 .andExpect(redirectedUrl(path));
+        mvc.perform(get("/api" + path).with(httpBasic(memberEmail, PASSWORD)))
+                .andExpect(jsonPath("$.booking.status").value("Picked up"))
+                .andExpect(jsonPath("$.booking.requestedReturnDate").value(LocalDate.now().toString()));
         mvc.perform(get("/admin" + path).with(httpBasic(adminEmail, PASSWORD)))
                 .andExpect(content().string(containsString("Confirm vehicle returned")));
         mvc.perform(post("/admin" + path + "/status").with(httpBasic(adminEmail, PASSWORD))

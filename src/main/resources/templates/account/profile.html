@@ -1,16 +1,13 @@
 <!DOCTYPE html>
-<!-- Khai báo namespace Thymeleaf để binding dữ liệu người dùng và đường dẫn -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My profile - Morrow</title>
-  <!-- Đường dẫn tương đối tới file CSS -->
   <link rel="stylesheet" href="../../static/css/auth.css" th:href="@{/css/auth.css}" />
 </head>
 <body>
   <main class="card">
-    <!-- Header điều hướng về trang chủ -->
     <div class="header">
       <a href="/" th:href="@{/}" class="logo">
         <span class="logo-mark"></span>
@@ -22,43 +19,44 @@
     <h1 class="title title-tight">My profile</h1>
     <p class="subtitle">View and update your personal account information.</p>
 
-    <!-- Thông báo kết quả cập nhật hồ sơ từ ProfileController -->
+    <div th:if="${isGuest}" class="alert-banner" style="background:#fef9c3; color:#854d0e; border:1px solid #fde047;">
+      <strong>Chế độ Khách (Chưa đăng nhập):</strong> Bạn đang xem trang Hồ sơ công khai.
+      <div style="margin-top:8px;">
+        <a th:href="@{/login}" style="font-weight:600; text-decoration:underline; margin-right:12px;">Đăng nhập ngay &rarr;</a>
+        <a th:href="@{/register}" style="font-weight:600; text-decoration:underline;">Đăng ký tài khoản &rarr;</a>
+      </div>
+    </div>
+
     <div th:if="${successMessage}" th:text="${successMessage}" class="alert-success"></div>
     <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert-banner"></div>
 
-    <!-- Form 1: Cập nhật thông tin hồ sơ cá nhân (UC06) -> POST /profile/update -->
     <form id="profileForm" th:action="@{/profile/update}" method="post" novalidate>
-      <!-- Email khóa readonly vì không cho phép sửa email đăng nhập -->
       <div class="field">
         <label class="label" for="email">Email</label>
-        <input class="input" type="email" id="email" name="email" th:value="${user?.email}" value="minh.nguyen@example.com" readonly />
+        <input class="input" type="email" id="email" name="email" th:value="${user?.email}" placeholder="Chưa đăng nhập" readonly />
         <span class="hint-text">Email address cannot be changed</span>
       </div>
 
-      <!-- Họ tên -->
       <div class="field">
         <label class="label" for="fullName">Full name</label>
-        <input class="input" type="text" id="fullName" name="fullName" th:value="${user?.fullName}" value="Nguyen Minh" required />
+        <input class="input" type="text" id="fullName" name="fullName" th:value="${user?.fullName}" placeholder="Khách tham quan" th:readonly="${isGuest}" required />
         <span id="profileNameError" class="error-msg">Full name is required</span>
       </div>
 
-      <!-- Số điện thoại -->
       <div class="field">
         <label class="label" for="phone">Phone number</label>
-        <input class="input" type="tel" id="phone" name="phone" th:value="${user?.phone}" value="+84 912 345 678" required />
+        <input class="input" type="tel" id="phone" name="phone" th:value="${user?.phone}" placeholder="Chưa cập nhật" th:readonly="${isGuest}" required />
         <span id="profilePhoneError" class="error-msg">Please enter a valid Vietnamese phone number</span>
       </div>
 
-      <!-- Ngày sinh (định dạng yyyy-MM-dd khớp với LocalDate) -->
       <div class="field">
         <label class="label" for="dateOfBirth">Date of birth</label>
-        <input class="input" type="date" id="dateOfBirth" name="dateOfBirth" th:value="${user?.dateOfBirth}" />
+        <input class="input" type="date" id="dateOfBirth" name="dateOfBirth" th:value="${user?.dateOfBirth}" th:readonly="${isGuest}" />
       </div>
 
-      <!-- Giới tính -->
       <div class="field">
         <label class="label" for="gender">Gender</label>
-        <select class="input" id="gender" name="gender">
+        <select class="input" id="gender" name="gender" th:disabled="${isGuest}">
           <option value="">-- Select gender --</option>
           <option value="Male" th:selected="${#strings.equalsIgnoreCase(user?.gender, 'Male') or #strings.equalsIgnoreCase(user?.gender, 'M')}">Male</option>
           <option value="Female" th:selected="${#strings.equalsIgnoreCase(user?.gender, 'Female') or #strings.equalsIgnoreCase(user?.gender, 'F')}">Female</option>
@@ -66,57 +64,51 @@
         </select>
       </div>
 
-      <!-- Địa chỉ -->
       <div class="field">
         <label class="label" for="address">Address</label>
-        <input class="input" type="text" id="address" name="address" th:value="${user?.address}" placeholder="Enter your address" />
+        <input class="input" type="text" id="address" name="address" th:value="${user?.address}" placeholder="Enter your address" th:readonly="${isGuest}" />
       </div>
 
-      <!-- Số GPLX / CCCD (cần thiết cho luồng đặt xe) -->
       <div class="field">
         <label class="label" for="licenseNumber">Driving licence / ID number</label>
-        <input class="input" type="text" id="licenseNumber" name="licenseNumber" th:value="${user?.licenseNumber}" placeholder="Enter your driving licence or ID number" />
+        <input class="input" type="text" id="licenseNumber" name="licenseNumber" th:value="${user?.licenseNumber}" placeholder="Enter your driving licence or ID number" th:readonly="${isGuest}" />
         <span class="hint-text">Required when booking a vehicle</span>
       </div>
 
-      <button type="submit" class="btn-submit">Save changes</button>
+      <button th:unless="${isGuest}" type="submit" class="btn-submit">Save changes</button>
     </form>
 
-    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
+    <div th:unless="${isGuest}">
+      <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
 
-    <!-- Form 2: Đổi mật khẩu ngay trên trang hồ sơ (UC06) -> POST /profile/change-password -->
-    <h2 class="title title-tight" style="font-size: 1.25rem;">Change password</h2>
-    <p class="subtitle">Update your password to keep your account secure.</p>
+      <h2 class="title title-tight" style="font-size: 1.25rem;">Change password</h2>
+      <p class="subtitle">Update your password to keep your account secure.</p>
 
-    <!-- Biến thông báo riêng của form đổi mật khẩu -->
-    <div th:if="${passwordSuccess}" th:text="${passwordSuccess}" class="alert-success"></div>
-    <div th:if="${passwordError}" th:text="${passwordError}" class="alert-banner"></div>
+      <div th:if="${passwordSuccess}" th:text="${passwordSuccess}" class="alert-success"></div>
+      <div th:if="${passwordError}" th:text="${passwordError}" class="alert-banner"></div>
 
-    <form id="changePasswordForm" th:action="@{/profile/change-password}" method="post" novalidate>
-      <!-- Mật khẩu hiện tại -->
-      <div class="field">
-        <label class="label" for="currentPassword">Current password</label>
-        <input class="input" type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password" required />
+      <form id="changePasswordForm" th:action="@{/profile/change-password}" method="post" novalidate>
+        <div class="field">
+          <label class="label" for="currentPassword">Current password</label>
+          <input class="input" type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password" required />
+        </div>
+
+        <div class="field">
+          <label class="label" for="newPassword">New password</label>
+          <input class="input" type="password" id="newPassword" name="newPassword" placeholder="At least 8 characters with letters and numbers" required />
+        </div>
+
+        <div class="field">
+          <label class="label" for="confirmPassword">Confirm new password</label>
+          <input class="input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter new password" required />
+        </div>
+
+        <button type="submit" class="btn-submit">Update password</button>
+      </form>
+
+      <div class="switch-text">
+        <a href="../auth/login.html" th:href="@{/logout}" class="no-gap">Log out</a>
       </div>
-
-      <!-- Mật khẩu mới -->
-      <div class="field">
-        <label class="label" for="newPassword">New password</label>
-        <input class="input" type="password" id="newPassword" name="newPassword" placeholder="At least 8 characters with letters and numbers" required />
-      </div>
-
-      <!-- Xác nhận mật khẩu mới -->
-      <div class="field">
-        <label class="label" for="confirmPassword">Confirm new password</label>
-        <input class="input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter new password" required />
-      </div>
-
-      <button type="submit" class="btn-submit">Update password</button>
-    </form>
-
-    <!-- Đăng xuất và hủy session -->
-    <div class="switch-text">
-      <a href="../auth/login.html" th:href="@{/logout}" class="no-gap">Log out</a>
     </div>
 
     <footer class="footer">
@@ -128,7 +120,6 @@
     </footer>
   </main>
 
-  <!-- Tải file JS kiểm tra form phía trình duyệt -->
   <script src="../../static/js/auth.js" th:src="@{/js/auth.js}"></script>
 </body>
 </html>

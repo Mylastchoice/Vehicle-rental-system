@@ -49,7 +49,8 @@ Backend **Java 21 + Spring Boot 3.5 + Spring Data JPA + PostgreSQL + Flyway + Sp
 ```bash
 mvn spring-boot:run
 ```
-Kiểm tra: http://localhost:8080/api/health và http://localhost:8080/api/vehicles
+Mở giao diện: http://localhost:8080/rental/index.html<br>
+Kiểm tra backend/API: http://localhost:8080/api/health (chỉ hiện trạng thái chạy) và http://localhost:8080/api/vehicles
 
 ## 4. API hiện có
 

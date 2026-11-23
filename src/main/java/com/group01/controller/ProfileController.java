@@ -26,7 +26,18 @@ public class ProfileController {
 
     @GetMapping({"/profile", "/account/profile"})
     public String showProfilePage(Principal principal, Model model) {
-        model.addAttribute("user", authService.findById(currentMember.requireMemberId(principal)));
+        if (principal == null) {
+            model.addAttribute("isGuest", true);
+            model.addAttribute("user", new User());
+            return "account/profile";
+        }
+        try {
+            model.addAttribute("isGuest", false);
+            model.addAttribute("user", authService.findById(currentMember.requireMemberId(principal)));
+        } catch (Exception e) {
+            model.addAttribute("isGuest", true);
+            model.addAttribute("user", new User());
+        }
         return "account/profile";
     }
 
@@ -43,9 +54,11 @@ public class ProfileController {
 
         try {
             User updatedUser = authService.updateProfile(userId, fullName, phone, dateOfBirth, gender, address, licenseNumber);
+            model.addAttribute("isGuest", false);
             model.addAttribute("user", updatedUser);
             model.addAttribute("successMessage", "Profile updated successfully.");
         } catch (IllegalArgumentException e) {
+            model.addAttribute("isGuest", false);
             model.addAttribute("user", authService.findById(userId));
             model.addAttribute("errorMessage", e.getMessage());
         }
@@ -67,6 +80,7 @@ public class ProfileController {
             model.addAttribute("passwordError", e.getMessage());
         }
 
+        model.addAttribute("isGuest", false);
         model.addAttribute("user", authService.findById(userId));
         return "account/profile";
     }

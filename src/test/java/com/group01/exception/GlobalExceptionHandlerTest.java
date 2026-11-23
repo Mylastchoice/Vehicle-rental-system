@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,12 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/t/conflict")
         String conflict() {
             throw new ConflictException("Vehicle is already booked for these dates.");
+        }
+
+        @GetMapping("/t/status-conflict")
+        String statusConflict() {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                    "This booking cannot be cancelled");
         }
 
         @GetMapping("/t/integrity")
@@ -93,6 +100,13 @@ class GlobalExceptionHandlerTest {
     @Test
     void conflictIs409() throws Exception {
         mvc.perform(get("/t/conflict")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void responseStatusExceptionPreservesStatusAndReason() throws Exception {
+        mvc.perform(get("/t/status-conflict"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This booking cannot be cancelled"));
     }
 
     @Test

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
-/** M4 member booking pages + JSON endpoints (UC view/cancel). */
+/** M4 member booking pages + JSON endpoints (UC view/cancel/return). */
 @Controller
 public class BookingController {
     private final BookingService service;
@@ -65,11 +65,31 @@ public class BookingController {
         return "redirect:/bookings/" + id;
     }
 
+    @PostMapping("/bookings/{id}/return-now")
+    public String returnNow(Principal principal, @PathVariable Long id, RedirectAttributes flash) {
+        try {
+            service.memberReturnNow(member.requireMemberId(principal), id);
+            flash.addFlashAttribute("message",
+                    "Đã gửi yêu cầu trả xe sớm. Nhân viên sẽ xác nhận khi nhận lại xe.");
+        } catch (ResponseStatusException e) {
+            flash.addFlashAttribute("message", e.getReason());
+        }
+        return "redirect:/bookings/" + id;
+    }
+
     @PostMapping("/bookings/{id}/cancel")
     public String cancel(Principal principal, @PathVariable Long id, RedirectAttributes flash) {
-        Map<String, Object> result = service.memberCancel(member.requireMemberId(principal), id);
-        flash.addFlashAttribute("message", "Booking cancelled. Refund request: "
-                + result.get("refundRequested") + " VND (" + result.get("refundStatus") + ")");
+        try {
+            Map<String, Object> result = service.memberCancel(member.requireMemberId(principal), id);
+            flash.addFlashAttribute("message", "Booking cancelled. Refund request: "
+                    + result.get("refundRequested") + " VND (" + result.get("refundStatus") + ")");
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode().value() != HttpStatus.CONFLICT.value()) {
+                throw e;
+            }
+            flash.addFlashAttribute("message",
+                    e.getReason() == null ? "This booking cannot be cancelled." : e.getReason());
+        }
         return "redirect:/bookings/" + id;
     }
 

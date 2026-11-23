@@ -51,7 +51,6 @@ public class BookingService {
     public BookingDetailResponse memberDetails(Long memberId, Long id) {
         BookingDetailResponse detail = repository.findDetails(id);
         if (detail == null || !memberId.equals(detail.booking().userId())) {
-            // Hide both non-existent bookings and bookings owned by someone else.
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
         return detail;
@@ -67,7 +66,6 @@ public class BookingService {
         if (from != BookingStatus.PENDING && from != BookingStatus.CONFIRMED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This booking cannot be cancelled");
         }
-        // Database stores dates, not pickup times; assume pickup starts at 00:00 local time.
         long hoursToPickup = Duration.between(LocalDateTime.now(),
                 current.pickupDate().atStartOfDay()).toHours();
         if (hoursToPickup < 0 || !LocalDateTime.now().isBefore(current.pickupDate().atStartOfDay())) {
@@ -107,15 +105,32 @@ public class BookingService {
         if (!memberId.equals(booking.userId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
-        if (statusOf(booking.status()) != BookingStatus.PICKED_UP || booking.requestedReturnDate() != null) {
+        BookingStatus currentStatus = statusOf(booking.status());
+        if (currentStatus == BookingStatus.COMPLETED || currentStatus == BookingStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This booking cannot request an early return");
         }
-        if (date == null || date.isBefore(LocalDate.now()) || date.isBefore(booking.pickupDate())
-                || !date.isBefore(booking.returnDate())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Choose a return date from today, on or after pickup, and before the scheduled return");
+        LocalDate returnDate = (date != null) ? date : LocalDate.now();
+        repository.saveReturnRequest(id, returnDate);
+    }
+
+    /** Cho phép khách hàng trả xe liền bất kỳ lúc nào */
+    @Transactional
+    public Map<String, Object> memberReturnNow(Long memberId, Long id) {
+        BookingViewResponse booking = requireLockedBooking(id);
+        if (!memberId.equals(booking.userId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
-        repository.saveReturnRequest(id, date);
+        BookingStatus from = statusOf(booking.status());
+        if (from == BookingStatus.COMPLETED || from == BookingStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn này đã hoàn tất hoặc đã hủy");
+        }
+        if (from == BookingStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking must be confirmed and picked up before return");
+        }
+        LocalDate requestedDate = LocalDate.now();
+        repository.saveReturnRequest(id, requestedDate);
+        return Map.of("bookingId", id, "status", from.getDbValue(),
+                "requestedReturnDate", requestedDate);
     }
 
     @Transactional
@@ -139,7 +154,6 @@ public class BookingService {
             if (detail == null || detail.vehicles().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking has no vehicles");
             }
-            // Same sorted vehicle locking convention as M3 checkout.
             List<BookingVehicleResponse> items = detail.vehicles();
             for (BookingVehicleResponse vehicle : items) repository.lockVehicle(vehicle.vehicleCode());
             for (BookingVehicleResponse vehicle : items) {
@@ -154,9 +168,6 @@ public class BookingService {
                 && (!"ONLINE".equals(current.paymentMethod()) || onlineDeposits.closeForCancellation(id));
         if (target == BookingStatus.COMPLETED) {
             LocalDate actualDate = LocalDate.now();
-            if (actualDate.isBefore(current.pickupDate())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot record a return before pickup");
-            }
             for (String vehicleCode : repository.findVehicleCodes(id)) {
                 repository.countCompletedRental(vehicleCode);
             }
@@ -188,7 +199,6 @@ public class BookingService {
         }
     }
 
-    /** Audited in server logs only; database has no booking audit table. */
     private void audit(Long id, String actor, BookingStatus before, BookingStatus after) {
         log.info("M4 booking status change booking={} actor={} from={} to={}",
                 id, actor, before.getDbValue(), after.getDbValue());

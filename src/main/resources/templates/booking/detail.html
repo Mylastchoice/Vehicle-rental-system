@@ -5,14 +5,17 @@
 <body><main>
   <p><a th:href="@{/bookings}">My bookings</a> / Details</p>
   <h1 th:text="${'Booking #' + detail.booking.bookingId}"></h1>
-  <p th:if="${message}" th:text="${message}"></p>
+  <p th:if="${message}" th:text="${message}" style="padding:12px;background:#dcfce7;color:#166534;border-radius:8px;font-weight:600;"></p>
   <section class="panel"><p><b>Status:</b> <span th:text="${detail.booking.status}"></span></p>
   <p><b>Pickup:</b> <span th:text="${detail.booking.pickupDate}"></span> — <span th:text="${detail.booking.pickupLocation}"></span> (<span th:text="${detail.booking.pickupBranchId}"></span>)</p>
   <p><b>Scheduled return:</b> <span th:text="${detail.booking.returnDate}"></span> (<span th:text="${detail.booking.returnBranchId}"></span>)</p>
   <p th:if="${detail.booking.requestedReturnDate}"><b>Requested early return:</b> <span th:text="${detail.booking.requestedReturnDate}"></span></p>
   <p th:if="${detail.booking.actualReturnDate}"><b>Actual return:</b> <span th:text="${detail.booking.actualReturnDate}"></span></p>
   <p><b>Total:</b> <span th:text="${detail.booking.totalAmount}"></span> VND</p>
-  <p><b>Deposit:</b> <span th:text="${detail.booking.depositAmount}"></span> VND</p>
+  <p><b>Deposit (30%):</b> <span th:text="${detail.booking.depositAmount}"></span> VND</p>
+  <p><b>Remaining balance at return (70%):</b>
+     <span th:text="${(detail.booking.totalAmount != null and detail.booking.depositAmount != null) ? detail.booking.totalAmount.subtract(detail.booking.depositAmount) : 0} + ' VND'"></span>
+  </p>
   <p><b>Payment method:</b> <span th:text="${detail.booking.paymentMethod}"></span></p>
   <p th:if="${depositStatus}"><b>Sandbox deposit status:</b> <span th:text="${depositStatus}"></span></p>
   <form th:if="${onlineEnabled == true and depositStatus == 'Pending' and detail.booking.status == 'Pending'}"
@@ -23,13 +26,18 @@
   <section class="panel"><h2>Vehicles</h2><table><tr><th>Vehicle</th><th>Dates</th><th>Subtotal (VND)</th></tr>
   <tr th:each="v : ${detail.vehicles}"><td th:text="${v.vehicleName + ' (' + v.vehicleCode + ')'}"></td>
     <td th:text="|${v.pickupDate} – ${v.returnDate}|"></td><td th:text="${v.subtotal}"></td></tr></table></section>
-  <form th:if="${detail.booking.status == 'Pending' or detail.booking.status == 'Confirmed'}"
-        th:action="@{/bookings/{id}/cancel(id=${detail.booking.bookingId})}" method="post"
-        onsubmit="return confirm('Cancel this booking?')"><button type="submit">Cancel booking</button></form>
-  <form th:if="${detail.booking.status == 'Picked up' and detail.booking.requestedReturnDate == null and today.isBefore(detail.booking.returnDate)}"
-        th:action="@{/bookings/{id}/early-return(id=${detail.booking.bookingId})}" method="post">
-    <label>Requested return date <input type="date" name="date" th:min="${today}"
-           th:max="${detail.booking.returnDate.minusDays(1)}" required></label>
-    <button type="submit">Request early return</button>
-  </form>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <form th:if="${detail.booking.status == 'Pending' or detail.booking.status == 'Confirmed'}"
+          th:action="@{/bookings/{id}/cancel(id=${detail.booking.bookingId})}" method="post"
+          onsubmit="return confirm('Cancel this booking?')"><button type="submit">Cancel booking</button></form>
+
+    <form th:if="${detail.booking.status == 'Confirmed' or detail.booking.status == 'Picked up'}"
+          th:action="@{/bookings/{id}/return-now(id=${detail.booking.bookingId})}" method="post"
+          onsubmit="return confirm('Gửi yêu cầu trả xe sớm cho nhân viên?')">
+      <button type="submit" style="background:#16a34a;color:white;border:none;border-radius:8px;font-weight:600;">
+        Yêu cầu trả xe ngay
+      </button>
+    </form>
+  </div>
 </main></body></html>
