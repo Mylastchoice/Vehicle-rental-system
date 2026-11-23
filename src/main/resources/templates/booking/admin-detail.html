@@ -8,7 +8,8 @@
 <p>Scheduled return: <span th:text="${detail.booking.returnDate}"></span></p>
 <p th:if="${detail.booking.requestedReturnDate}">Requested early return: <span th:text="${detail.booking.requestedReturnDate}"></span></p>
 <p th:if="${detail.booking.actualReturnDate}">Actual return: <span th:text="${detail.booking.actualReturnDate}"></span></p>
-<p>Total: <span th:text="${detail.booking.totalAmount}"></span> VND; deposit: <span th:text="${detail.booking.depositAmount}"></span> VND</p>
+<p>Total: <span th:text="${detail.booking.totalAmount}"></span> VND; deposit (30%): <span th:text="${detail.booking.depositAmount}"></span> VND</p>
+<p>Remaining balance (70%): <b th:text="${(detail.booking.totalAmount != null and detail.booking.depositAmount != null) ? detail.booking.totalAmount.subtract(detail.booking.depositAmount) : 0} + ' VND'"></b></p>
 <p>Payment method: <span th:text="${detail.booking.paymentMethod}"></span></p>
 <p th:if="${depositStatus}">Sandbox deposit status: <b th:text="${depositStatus}"></b></p>
 <h2>Vehicles</h2><table><tr><th>Code</th><th>Dates</th><th>Subtotal</th></tr>
@@ -20,6 +21,6 @@
 <option th:if="${detail.booking.status == 'Pending' or detail.booking.status == 'Confirmed'}" value="CANCELLED">Cancel</option>
 <option th:if="${detail.booking.status == 'Confirmed'}" value="PICKED_UP">Record pickup</option>
 <option th:if="${detail.booking.status == 'Picked up'}" value="COMPLETED"
-        th:text="${detail.booking.requestedReturnDate == null ? 'Record return' : 'Confirm vehicle returned'}">Record return</option>
+        th:text="${detail.booking.requestedReturnDate == null ? 'Record immediate return' : 'Confirm vehicle returned'}">Record immediate return</option>
 </select></label> <button type="submit">Update status</button></form>
 </main></body></html>

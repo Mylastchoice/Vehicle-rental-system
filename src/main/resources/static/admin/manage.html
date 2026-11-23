@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MORROW - Manage Vehicles &amp; Users</title>
+  <link rel="stylesheet" href="/rental/style.css">
+  <style>
+    main { max-width: 1180px; margin: 36px auto; padding: 24px; }
+    .admin-nav { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .tab-bar { display: flex; gap: 10px; margin: 18px 0 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+    .tab-btn { padding: 10px 18px; border-radius: 8px; border: 1px solid #d1d5db; background: #fff; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: #202820; color: #d9f99d; border-color: #202820; }
+    .panel { background: #fff; padding: 22px; border-radius: 12px; margin-bottom: 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .form-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; font-weight: 600; }
+    .form-row input, .form-row select { padding: 9px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.94rem; }
+    th, td { padding: 11px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: middle; }
+    th { background: #f9fafb; font-weight: 700; }
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-warn { background: #fef9c3; color: #854d0e; }
+    .badge-off { background: #fee2e2; color: #991b1b; }
+    .btn-sm { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-weight: 600; }
+    .btn-sm:hover { background: #f3f4f6; }
+    .btn-danger { border-color: #fecaca; color: #b91c1c; }
+    .btn-primary { padding: 10px 18px; border-radius: 8px; border: none; background: #202820; color: #d9f99d; font-weight: 700; cursor: pointer; }
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; }
+    .alert-success { background: #dcfce7; color: #166534; }
+    .alert-error { background: #fee2e2; color: #991b1b; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="admin-nav">
+    <a href="/rental/index.html">Home</a>
+    <span>/</span>
+    <a href="/admin/bookings">Manage bookings</a>
+    <span>/</span>
+    <strong>Vehicles &amp; Users</strong>
+    <span style="margin-left:auto;"><a href="/logout">Log out</a></span>
+  </div>
+
+  <h1>System Administration</h1>
+  <div id="flash-box" class="alert" hidden></div>
+
+  <div class="tab-bar">
+    <button type="button" class="tab-btn active" data-tab="vehicles-tab">Manage Vehicles</button>
+    <button type="button" class="tab-btn" data-tab="users-tab">Manage Users</button>
+  </div>
+
+  <!-- TAB 1: QUẢN LÝ XE -->
+  <section id="vehicles-tab">
+    <div class="panel">
+      <h2 style="margin-top:0;">Add New Vehicle</h2>
+      <form id="add-vehicle-form">
+        <div class="form-row">
+          <label>Vehicle Code *
+            <input id="v-code" required placeholder="e.g. CAR-VF6">
+          </label>
+          <label>Vehicle Name *
+            <input id="v-name" required placeholder="e.g. VinFast VF 6">
+          </label>
+          <label>Category *
+            <select id="v-category" required></select>
+          </label>
+          <label>Branch *
+            <select id="v-branch" required></select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Daily Price (VND) *
+            <input id="v-price" type="number" min="1000" step="1000" required placeholder="e.g. 750000">
+          </label>
+          <label>Discount Rate (0 - 1)
+            <input id="v-discount" type="number" min="0" max="1" step="0.01" value="0">
+          </label>
+          <label>License Plate
+            <input id="v-plate" placeholder="e.g. 51A-888.88">
+          </label>
+          <label>Status
+            <select id="v-status">
+              <option value="Available">Available</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Rented">Rented</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Image URL
+            <input id="v-image" value="/rental/assets/vinfast-vf5.jpg">
+          </label>
+          <label>Short Description
+            <input id="v-desc" placeholder="Brief vehicle description">
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">+ Add Vehicle</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0;">Vehicle Fleet List</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Category / Branch</th>
+              <th>Daily Price (VND)</th>
+              <th>Status</th>
+              <th>Rentals</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vehicles-tbody">
+            <tr><td colspan="7">Loading vehicles...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: QUẢN LÝ NGƯỜI DÙNG -->
+  <section id="users-tab" hidden>
+    <div class="panel">
+      <h2 style="margin-top:0;">Create Member Account</h2>
+      <form id="add-user-form">
+        <div class="form-row">
+          <label>Full Name *
+            <input id="u-name" required placeholder="Nguyen Van A">
+          </label>
+          <label>Email *
+            <input id="u-email" type="email" required placeholder="member@example.com">
+          </label>
+          <label>Phone Number *
+            <input id="u-phone" required placeholder="0901234567">
+          </label>
+          <label>Password (min 8 chars) *
+            <input id="u-pass" type="password" minlength="8" required placeholder="********">
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">+ Create User</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0;">Registered Users</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  const flashBox = document.getElementById('flash-box');
+  let categoryMap = {};
+  let branchMap = {};
+
+  function showFlash(msg, isError = false) {
+    flashBox.textContent = msg;
+    flashBox.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+    flashBox.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function api(url, options = {}) {
+    const res = await fetch(url, {
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {})
+      },
+      ...options
+    });
+    if (res.status === 204) return null;
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      throw new Error(data.message || data.detail || `Request failed (HTTP ${res.status})`);
+    }
+    return data;
+  }
+
+  // Chuyển Tab
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.tab;
+      document.getElementById('vehicles-tab').hidden = target !== 'vehicles-tab';
+      document.getElementById('users-tab').hidden = target !== 'users-tab';
+    });
+  });
+
+  async function loadLookups() {
+    const catSelect = document.getElementById('v-category');
+    const brSelect = document.getElementById('v-branch');
+    try {
+      const cats = await api('/api/admin/categories');
+      catSelect.replaceChildren();
+      (cats || []).forEach(c => {
+        categoryMap[c.categoryId] = c.categoryName;
+        const opt = document.createElement('option');
+        opt.value = c.categoryId;
+        opt.textContent = `${c.categoryId} - ${c.categoryName}`;
+        catSelect.appendChild(opt);
+      });
+    } catch (_) {}
+
+    try {
+      const rawBranches = await api('/api/branches');
+      const branches = Array.isArray(rawBranches) ? rawBranches : (rawBranches.items || rawBranches.content || []);
+      brSelect.replaceChildren();
+      branches.forEach(b => {
+        const id = b.branchId ?? b.id;
+        const name = b.branchName ?? b.name ?? `Branch #${id}`;
+        branchMap[id] = name;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${id} - ${name}`;
+        brSelect.appendChild(opt);
+      });
+    } catch (_) {
+      brSelect.innerHTML = '<option value="1">1 - Branch 1</option><option value="2">2 - Branch 2</option>';
+    }
+  }
+
+  async function loadVehicles() {
+    const tbody = document.getElementById('vehicles-tbody');
+    try {
+      const list = await api('/api/admin/vehicles');
+      tbody.replaceChildren();
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No vehicles found.</td></tr>';
+        return;
+      }
+      for (const v of list) {
+        const tr = document.createElement('tr');
+
+        const tdCode = document.createElement('td');
+        tdCode.innerHTML = `<strong>${v.vehicleCode}</strong>`;
+
+        const tdName = document.createElement('td');
+        tdName.textContent = v.name;
+
+        const tdCat = document.createElement('td');
+        tdCat.textContent = `${categoryMap[v.categoryId] || ('Cat #' + v.categoryId)} · ${branchMap[v.branchId] || ('Branch #' + v.branchId)}`;
+
+        const tdPrice = document.createElement('td');
+        tdPrice.textContent = Number(v.dailyPrice).toLocaleString('vi-VN');
+
+        const tdStatus = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (v.status === 'Available' ? 'badge-ok' : (v.status === 'Maintenance' ? 'badge-warn' : 'badge-off'));
+        badge.textContent = v.status;
+        tdStatus.appendChild(badge);
+
+        const tdRentals = document.createElement('td');
+        tdRentals.textContent = v.rentalCount ?? 0;
+
+        const tdActions = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'actions';
+
+        const statusSel = document.createElement('select');
+        statusSel.className = 'btn-sm';
+        ['Available', 'Maintenance', 'Rented'].forEach(st => {
+          const opt = document.createElement('option');
+          opt.value = st;
+          opt.textContent = st;
+          if (v.status === st) opt.selected = true;
+          statusSel.appendChild(opt);
+        });
+        statusSel.addEventListener('change', async () => {
+          try {
+            await api(`/api/admin/vehicles/${encodeURIComponent(v.vehicleCode)}`, {
+              method: 'PUT',
+              body: JSON.stringify({ status: statusSel.value })
+            });
+            showFlash(`Updated status of ${v.vehicleCode} to ${statusSel.value}.`);
+            await loadVehicles();
+          } catch (err) {
+            showFlash(err.message, true);
+            await loadVehicles();
+          }
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-sm btn-danger';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`Delete vehicle ${v.vehicleCode}?`)) return;
+          try {
+            await api(`/api/admin/vehicles/${encodeURIComponent(v.vehicleCode)}`, { method: 'DELETE' });
+            showFlash(`Deleted vehicle ${v.vehicleCode}.`);
+            await loadVehicles();
+          } catch (err) {
+            showFlash(err.message, true);
+          }
+        });
+
+        wrap.append(statusSel, delBtn);
+        tdActions.appendChild(wrap);
+        tr.append(tdCode, tdName, tdCat, tdPrice, tdStatus, tdRentals, tdActions);
+        tbody.appendChild(tr);
+      }
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
+    }
+  }
+
+  async function loadUsers() {
+    const tbody = document.getElementById('users-tbody');
+    try {
+      const list = await api('/api/admin/users');
+      tbody.replaceChildren();
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No users found.</td></tr>';
+        return;
+      }
+      for (const u of list) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${u.userId}</td>
+          <td><strong>${u.fullName}</strong></td>
+          <td>${u.email}</td>
+          <td>${u.phone || ''}</td>
+          <td>${u.role}</td>
+        `;
+        const tdStatus = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (u.status === 'ACTIVE' ? 'badge-ok' : 'badge-off');
+        badge.textContent = u.status;
+        tdStatus.appendChild(badge);
+
+        const tdActions = document.createElement('td');
+        if (u.role !== 'ADMIN') {
+          const nextStatus = u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn-sm ' + (nextStatus === 'INACTIVE' ? 'btn-danger' : '');
+          btn.textContent = nextStatus === 'INACTIVE' ? 'Deactivate' : 'Activate';
+          btn.addEventListener('click', async () => {
+            try {
+              await api(`/api/admin/users/${u.userId}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: nextStatus })
+              });
+              showFlash(`User ${u.email} is now ${nextStatus}.`);
+              await loadUsers();
+            } catch (err) {
+              showFlash(err.message, true);
+            }
+          });
+          tdActions.appendChild(btn);
+        } else {
+          tdActions.textContent = 'System Admin';
+        }
+
+        tr.append(tdStatus, tdActions);
+        tbody.appendChild(tr);
+      }
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
+    }
+  }
+
+  document.getElementById('add-vehicle-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      vehicleCode: document.getElementById('v-code').value.trim(),
+      name: document.getElementById('v-name').value.trim(),
+      categoryId: Number(document.getElementById('v-category').value),
+      branchId: Number(document.getElementById('v-branch').value),
+      dailyPrice: Number(document.getElementById('v-price').value),
+      discountRate: Number(document.getElementById('v-discount').value || 0),
+      licensePlate: document.getElementById('v-plate').value.trim() || null,
+      imageUrl: document.getElementById('v-image').value.trim() || null,
+      shortDescription: document.getElementById('v-desc').value.trim() || null,
+      status: document.getElementById('v-status').value
+    };
+    try {
+      await api('/api/admin/vehicles', { method: 'POST', body: JSON.stringify(payload) });
+      e.target.reset();
+      showFlash(`Vehicle ${payload.vehicleCode} added successfully.`);
+      await loadVehicles();
+    } catch (err) {
+      showFlash(err.message, true);
+    }
+  });
+
+  document.getElementById('add-user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      fullName: document.getElementById('u-name').value.trim(),
+      email: document.getElementById('u-email').value.trim(),
+      phone: document.getElementById('u-phone').value.trim(),
+      password: document.getElementById('u-pass').value
+    };
+    try {
+      await api('/api/admin/users', { method: 'POST', body: JSON.stringify(payload) });
+      e.target.reset();
+      showFlash(`Member account ${payload.email} created successfully.`);
+      await loadUsers();
+    } catch (err) {
+      showFlash(err.message, true);
+    }
+  });
+
+  (async function init() {
+    await loadLookups();
+    await loadVehicles();
+    await loadUsers();
+  })();
+}());
+</script>
+</body>
+</html>

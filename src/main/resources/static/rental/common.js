@@ -55,7 +55,7 @@
     if (name.includes('veloz')) return root + 'assets/vf-veloz.jpg';
     const raw = vehicle.imageUrl;
     if (typeof raw === 'string' && (/^https:\/\//.test(raw) || /^\/(?!\/)/.test(raw))) return raw;
-    return root + 'assets/road-trip.jpg'; // illustrative fallback, not guaranteed vehicle photo
+    return root + 'assets/road-trip.jpg';
   }
   async function refreshCount() {
     const count = document.getElementById('cart-count');
@@ -63,7 +63,16 @@
     try { count.textContent = (await api('/api/carts/me')).items.length; }
     catch (_) { count.textContent = '0'; }
   }
+  function ensureProfileLink() {
+    const devrow = document.querySelector('.devrow');
+    if (!devrow || document.getElementById('public-profile-link')) return;
+    const profileLink = el('a', '', 'My profile ↗');
+    profileLink.id = 'public-profile-link';
+    profileLink.href = '/profile';
+    devrow.appendChild(profileLink);
+  }
   async function refreshAccountLink() {
+    ensureProfileLink();
     const link = document.getElementById('account-link');
     if (!link) return;
     const response = await fetch('/api/me', { headers: { Accept: 'application/json' } }).catch(() => null);
@@ -73,9 +82,10 @@
       link.href = '/admin/bookings';
       link.textContent = 'Manage bookings ↗';
     } else if (roles.includes('ROLE_MEMBER')) {
-      link.href = '/profile';
-      link.textContent = 'My profile ↗';
-      document.getElementById('bookings-link').hidden = false;
+      link.href = '/logout';
+      link.textContent = 'Sign out ↗';
+      const bookingsLink = document.getElementById('bookings-link');
+      if (bookingsLink) bookingsLink.hidden = false;
     }
   }
   document.addEventListener('DOMContentLoaded', refreshCount);

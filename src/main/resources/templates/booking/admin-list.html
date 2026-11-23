@@ -1,7 +1,14 @@
 <!doctype html><html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MORROW - Booking administration</title>
 <link rel="stylesheet" th:href="@{/rental/style.css}"><style>main{max-width:1100px;margin:45px auto;padding:24px}table{width:100%;border-collapse:collapse;background:white}td,th{padding:12px;border-bottom:1px solid #ddd;text-align:left}input,select,button{padding:8px}.pager{display:flex;gap:15px;margin-top:20px}</style></head>
-<body><main><p><a th:href="@{/rental/index.html}">Home</a> / Admin · <a th:href="@{/logout}">Log out</a></p><h1>Manage bookings</h1>
+<body><main>
+<p style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+  <a th:href="@{/rental/index.html}">Home</a> <span>/</span>
+  <strong>Manage bookings</strong> <span>|</span>
+  <a href="/admin/manage.html" style="padding:6px 12px; background:#202820; color:#d9f99d; border-radius:6px; text-decoration:none; font-weight:600;">Manage Vehicles &amp; Users &rarr;</a>
+  <span style="margin-left:auto;"><a th:href="@{/logout}">Log out</a></span>
+</p>
+<h1>Manage bookings</h1>
 <form method="get" th:action="@{/admin/bookings}">
  <label>Status <select name="status"><option value="">All</option>
  <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s.dbValue}" th:selected="${s.name() == statusFilter}"></option></select></label>

@@ -83,6 +83,14 @@ class BookingServiceTest {
     }
 
     @Test
+    void confirmedBookingCannotSkipPickupAndComplete() {
+        when(repository.lockById(15L)).thenReturn(booking(1L, LocalDate.now().plusDays(3), "Confirmed"));
+        var e = assertThrows(ResponseStatusException.class,
+                () -> service.adminUpdateStatus(15L, BookingStatus.COMPLETED, "admin@example.com"));
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+    }
+
+    @Test
     void overlapBlocksAdminConfirmation() {
         var current = booking(1L, LocalDate.now().plusDays(3), "Pending");
         var vehicle = new BookingVehicleResponse("V001", "Car 1", current.pickupDate(),

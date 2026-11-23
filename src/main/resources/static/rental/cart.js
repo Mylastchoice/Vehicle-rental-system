@@ -12,10 +12,9 @@
       const items = cart.items || [];
       itemsHost.replaceChildren(); empty.hidden = items.length > 0;
       let total = 0;
-      const dates = new Set(), branches = new Set();
+      const branches = new Set();
       for (const item of items) {
         total += Number(item.estimatedSubtotal);
-        dates.add(`${item.pickupDate}|${item.returnDate}`);
         branches.add(String(item.branchId));
         const card = el('article', 'cart-card');
         const img = el('img', 'cart-thumb'); img.alt = `Image for ${item.vehicleName}`; img.src = imageFor(item);
@@ -49,8 +48,8 @@
       document.getElementById('cart-deposit').textContent = money(deposit);
       document.getElementById('cart-remaining').textContent = money(total - deposit);
       warning.hidden = true;
-      if (items.length && (dates.size > 1 || branches.size > 1)) {
-        warning.textContent = 'Checkout requires every vehicle to share the same pickup/return dates and pickup branch. Adjust the dates or remove vehicles from different branches.';
+      if (items.length && branches.size > 1) {
+        warning.textContent = 'Checkout requires every vehicle to belong to the same pickup branch. Remove vehicles from different branches to proceed.';
         warning.hidden = false;
       } else if (items.some(x => !isDateRange(x.pickupDate, x.returnDate))) {
         warning.textContent = 'Your cart contains expired or invalid rental dates. Please update them before checkout.';

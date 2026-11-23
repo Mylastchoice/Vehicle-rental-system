@@ -6,35 +6,51 @@
   const errorBox = document.getElementById('checkout-error');
   const host = document.getElementById('checkout-items');
   let items = [];
+  let totalSum = 0;
   let sending = false;
-  form.querySelectorAll('[name="payment"]').forEach(option => {
-    option.addEventListener('change', () => {
-      form.querySelectorAll('.payment-option').forEach(label => {
-        label.classList.toggle('selected', label.querySelector('input').checked);
+
+  function updateSummaryAmounts() {
+    const isFull = form.elements.paymentOption.value === 'FULL';
+    const payable = isFull ? totalSum : Math.round(totalSum * 0.3);
+    const remaining = Math.max(0, totalSum - payable);
+    document.getElementById('checkout-deposit-label').textContent = isFull
+      ? 'Full payment · 100%'
+      : 'Deposit · 30%';
+    document.getElementById('checkout-deposit').textContent = money(payable);
+    document.getElementById('checkout-remaining').textContent = money(remaining);
+    document.getElementById('checkout-total').textContent = money(totalSum);
+  }
+
+  form.querySelectorAll('fieldset.payment-box').forEach(fieldset => {
+    fieldset.querySelectorAll('input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        fieldset.querySelectorAll('.payment-option').forEach(label => {
+          label.classList.toggle('selected', label.querySelector('input').checked);
+        });
+        if (radio.name === 'paymentOption') updateSummaryAmounts();
       });
     });
   });
+
   async function initialize() {
     try {
       const data = await api('/api/carts/me');
       items = data.items || [];
       host.replaceChildren();
       if (!items.length) { host.append(el('div', 'notice warning', 'Your cart is empty. Choose a vehicle first.')); return; }
-      const dateGroups = new Set(items.map(x => `${x.pickupDate}|${x.returnDate}`));
       const branchGroups = new Set(items.map(x => String(x.branchId)));
-      if (dateGroups.size !== 1 || branchGroups.size !== 1 || items.some(x => !isDateRange(x.pickupDate, x.returnDate))) {
-        host.append(el('div', 'notice warning', 'All vehicles must use the same valid dates and pickup branch. Edit your cart first.')); return;
+      if (branchGroups.size !== 1 || items.some(x => !isDateRange(x.pickupDate, x.returnDate))) {
+        host.append(el('div', 'notice warning', 'All vehicles must use valid dates and the same pickup branch. Edit your cart first.')); return;
       }
-      let sum = 0;
+      totalSum = 0;
       for (const item of items) {
-        sum += Number(item.estimatedSubtotal);
+        totalSum += Number(item.estimatedSubtotal);
         const row = el('div', 'checkout-mini');
         const image = el('img'); image.alt = item.vehicleName; image.src = imageFor(item);
         const details = el('div'); details.append(el('strong', '', item.vehicleName), el('small', '', `${item.pickupDate} → ${item.returnDate} · ${money(item.estimatedSubtotal)}`));
         row.append(image, details); host.append(row);
       }
-      document.getElementById('checkout-total').textContent = money(sum);
-      document.getElementById('checkout-deposit').textContent = money(Math.round(sum * .3));
+      updateSummaryAmounts();
       document.getElementById('pickup-location').value = items[0].branchName || '';
       const online = form.querySelector('[value="ONLINE"]');
       const options = await api('/api/payment-options').catch(() => ({ online: false }));
@@ -46,6 +62,7 @@
       submit.disabled = false;
     } catch (error) { host.replaceChildren(el('div', 'notice error', `Cannot load cart: ${error.message}`)); }
   }
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (sending || submit.disabled) return;
@@ -63,7 +80,8 @@
       renterPhone: document.getElementById('renter-phone').value.trim(),
       renterLicenseNumber: document.getElementById('renter-license').value.trim(),
       pickupLocation: document.getElementById('pickup-location').value.trim(),
-      paymentMethod: form.elements.payment.value
+      paymentMethod: form.elements.payment.value,
+      paymentOption: form.elements.paymentOption.value
     };
     try {
       const result = await api('/api/checkout', { method: 'POST', body: JSON.stringify(body) });
@@ -72,7 +90,6 @@
         window.location.href = `/bookings/${encodeURIComponent(result.bookingId)}`;
         return;
       }
-      // Save only a display snapshot. Real data remains in PostgreSQL; session storage is NOT proof of payment.
       sessionStorage.setItem('morrow-booking-confirmation', JSON.stringify(result));
       window.location.href = `/rental/confirmation.html?bookingId=${encodeURIComponent(result.bookingId)}`;
     } catch (error) { errorBox.textContent = error.message; errorBox.hidden = false; notify('Booking request was not completed.', true); }

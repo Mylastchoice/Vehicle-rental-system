@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Turns every exception into the same {@link ApiError} JSON. Internal details (SQL, stack traces) are logged
@@ -117,6 +118,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> forbidden(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "You do not have permission to access this resource", request);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> responseStatus(ResponseStatusException ex, HttpServletRequest request) {
+        int status = ex.getStatusCode().value();
+        HttpStatus resolvedStatus = HttpStatus.resolve(status);
+        String error = resolvedStatus == null ? "Error" : resolvedStatus.getReasonPhrase();
+        String message = ex.getReason() == null ? error : ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(ApiError.of(status, error, message, request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

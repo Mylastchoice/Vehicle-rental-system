@@ -44,7 +44,8 @@ public class SecurityConfig {
                     "/api/payment-options", "/api/payments/stripe/webhook",
                     "/css/**", "/js/**", "/images/**", "/assets/**", "/favicon.ico"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/vehicles/**", "/api/categories/**", "/api/branches/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/vehicles/**", "/api/categories/**", "/api/branches/**",
+                        "/api/vehicle-options").permitAll()
                 .requestMatchers("/api/admin/**", "/api/database").hasRole("ADMIN")
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/member/**", "/profile", "/profile/**", "/account/profile").hasRole("MEMBER")
